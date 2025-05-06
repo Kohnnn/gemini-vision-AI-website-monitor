@@ -217,6 +217,11 @@ For Windows users, several batch files are included for convenience:
 - Improved time-based scheduling in containerized environments
 
 ## How to Start the Application
-1. Ensure Redis is running
-2. Run the `start_website_monitor.bat` script
-3. Access the application at http://127.0.0.1:5000
+Read DOCKER_README.md
+or run
+```
+git clone https://github.com/Kohnnn/AI_Website_Monitor
+cd AI_Website_Monitor
+docker compose up --build
+```
+
