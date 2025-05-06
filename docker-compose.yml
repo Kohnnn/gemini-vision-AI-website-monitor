@@ -22,6 +22,9 @@ services:
       - ./data:/app/data
     ports:
       - "5000:5000"
+    devices:
+      - /dev/random:/dev/random
+      - /dev/urandom:/dev/urandom
     environment:
       - FLASK_APP=app.py
       - FLASK_DEBUG=0
@@ -40,6 +43,9 @@ services:
     volumes:
       - .:/app
       - ./data:/app/data
+    devices:
+      - /dev/random:/dev/random
+      - /dev/urandom:/dev/urandom
     environment:
       - REDIS_URL=redis://redis:6379
       - DOCKER_ENV=true

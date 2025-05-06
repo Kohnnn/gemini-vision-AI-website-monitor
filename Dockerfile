@@ -6,6 +6,10 @@ WORKDIR /app
 ENV TZ=Asia/Ho_Chi_Minh
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# Install entropy generation tools first to prevent hanging during builds
+RUN apt-get update && apt-get install -y haveged rng-tools && \
+    service haveged start
+
 # Install system dependencies including Node.js and npm for Playwright
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -57,14 +61,24 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright with browsers
+# Set environment variable for Playwright browser path - MUST be before installation
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
+
+# Install Playwright with browsers - ensure correct install location
 RUN pip install playwright && \
-    playwright install --with-deps chromium && \
+    python -m playwright install chromium && \
     python -m playwright install-deps chromium
 
-# Install Playwright using npm for server mode
+# Make start_playwright_server.sh executable
+COPY start_playwright_server.sh /app/
+RUN chmod +x /app/start_playwright_server.sh && \
+    # Convert Windows line endings to Unix
+    sed -i 's/\r$//' /app/start_playwright_server.sh
+
+# Install Playwright using npm for server mode (redundant but for compatibility)
 RUN npm init -y && \
     npm install playwright@latest && \
+    mkdir -p /app/ms-playwright && \
     npx playwright install chromium && \
     npx playwright install-deps chromium
 
@@ -79,7 +93,10 @@ RUN mkdir -p data && \
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app.py
 ENV DOCKER_ENV=true
-ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
+
+# Additional Playwright check
+RUN ls -la /app/ms-playwright || echo "Playwright browser directory not found"
+RUN python -c "from playwright.sync_api import sync_playwright; print('Playwright works!')" || echo "Playwright check failed"
 
 # Expose the port
 EXPOSE 5000
