@@ -216,7 +216,7 @@ For Windows users, several batch files are included for convenience:
 - Container timezone now follows host system for accurate timestamps
 - Improved time-based scheduling in containerized environments
 
-## How to Start the Application
+## How to Start the App in Docker
 Read DOCKER_README.md
 or run
 ```
