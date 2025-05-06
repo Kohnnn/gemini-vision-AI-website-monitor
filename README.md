@@ -9,14 +9,9 @@ A robust website monitoring solution with AI-powered change detection, screensho
 - **AI Change Detection**: Use Gemini Vision API (`gemini-1.5-flash-latest`) for intelligent change summaries, respecting user-defined focus areas.
 - **Screenshots**: Capture full-page screenshots using a local Playwright server.
 - **Notifications**: Receive alerts via Email, Telegram, and Microsoft Teams.
-- **UI/UX:**
-    - Modern UI with persistent dark mode.
-    - Dashboard with List/Grid view options.
-    - Base template ensures consistency across pages.
-    - Local timezone display for all timestamps.
 - **Manual & Scheduled Checks**: Trigger checks on demand (with immediate feedback) or automatically via background worker (manual start required).
 - **Test URL & Analyze:** Pre-flight check on Add Website page to verify URL, screenshot, and AI analysis.
-- **Data Cleanup**: Manually delete old check history and associated files.
+- **Data Cleanup**: Delete old check history and associated files.
 
 ---
 
