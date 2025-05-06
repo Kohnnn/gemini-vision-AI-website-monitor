@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Website Monitor{% endblock %}</title>
+
+    {# Favicon using emoji #}
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕵</text></svg>">
+
+    {# Dark Mode Flash Prevention Script - Place Early #}
+    <script>
+        (function() {
+            try {
+                const darkMode = localStorage.getItem('darkMode');
+                if (darkMode === 'enabled') {
+                    document.documentElement.classList.add('dark-mode'); // Apply to <html> tag
+                }
+            } catch (e) { console.error('Error applying dark mode preference:', e); }
+        })();
+    </script>
+
+    {# Link to the main stylesheet #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {# Include FontAwesome if needed for icons (optional) #}
+    {# <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> #}
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    {# Dark Mode Toggle Button - MOVED TO HEADER #}
+    {# {% include '_darkmode_toggle.html' %} #}
+
+    {# Flash Messages Container - Positioned fixed by CSS #}
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {# Map Flask categories (e.g., 'danger') to CSS alert classes (e.g., 'alert-error') #}
+                    {% set alert_class = 'alert-info' %} {# Default #}
+                    {% if category == 'success' %}{% set alert_class = 'alert-success' %}
+                    {% elif category == 'danger' or category == 'error' %}{% set alert_class = 'alert-danger' %}
+                    {% elif category == 'warning' %}{% set alert_class = 'alert-warning' %}
+                    {% endif %}
+                    <div class="alert {{ alert_class }}" role="alert">
+                        {{ message }}
+                        {# Optional: Add a close button for alerts #}
+                        {# <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button> #}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {# Optional: Basic Header #}
+    <header class="app-header">
+        <div class="container flex justify-between items-center"> {# Use flex for layout #}
+            <h1><a href="{{ url_for('index') }}">🕵 AI Website Monitor</a></h1>
+            {# Include Dark Mode Toggle Button INSIDE header container #}
+            {% include '_darkmode_toggle.html' %}
+        </div>
+    </header>
+
+    {# Main Content Area #}
+    <main class="container">
+        {% block content %}
+        {# Content from child templates will go here #}
+        {% endblock %}
+    </main>
+
+    {# Optional: Footer #}
+    {#
+    <footer class="container text-center text-muted mt-5">
+        <p>&copy; {{ now.year }} AI Website Monitor</p>
+    </footer>
+    #}
+
+    {# Include darkmode.js at the end of the body #}
+    <script src="{{ url_for('static', filename='darkmode.js') }}" defer></script>
+    {% block scripts_extra %}{% endblock %}
+</body>
+</html> 

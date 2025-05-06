@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Add Website - AI Website Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h2 class="text-2xl font-semibold mb-6">Add New Website for {{ user_id }}</h2>
+
+    {# Test Area First #}
+    {# MOVED THIS SECTION TO THE BOTTOM #}
+    {# <div class="card mb-6">
+        <h3 class="card-title">Test URL & AI Analysis</h3>
+        <div class="form-group">
+            <label for="test_url">URL to Test</label>
+            <input type="url" id="test_url" class="input" placeholder="https://example.com">
+        </div>
+         <div class="form-group">
+            <label for="test_ai_focus">AI Focus Area (Optional for Test)</label>
+            <input type="text" id="test_ai_focus" class="input" placeholder="e.g., pricing section">
+         </div>
+        <button type="button" id="test-analyze-btn" class="btn btn-secondary">Test URL & Get AI Description</button>
+        <div id="test-analyze-result" class="mt-4 text-sm"></div>
+        <div id="test-screenshot-preview" class="mt-3" style="max-height: 200px; overflow: hidden;"></div>
+    </div> #}
+
+    {# Add Website Form #}
+    <form action="{{ url_for('add_website', user_id=user_id) }}" method="post" id="add-website-form">
+        <div class="card">
+            <h3 class="card-title">Add Website Details</h3>
+            {# URL Input #}
+            <div class="form-group">
+                <label for="url">Website URL</label>
+                <input type="url" id="url" name="url" class="input" placeholder="https://example.com" required title="The full URL (including http/https) of the website to monitor.">
+            </div>
+
+            {# Frequency Settings #}
+            <div class="form-group">
+                <label>Check Frequency</label>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <input type="radio" id="freq_interval" name="frequency_type" value="interval" checked onchange="toggleFrequencyInput()" title="Check at regular intervals (e.g., every 60 minutes)">
+                    <label for="freq_interval" class="mb-0 font-normal">Interval</label>
+                    <input type="radio" id="freq_specific" name="frequency_type" value="specific_times" onchange="toggleFrequencyInput()" title="Check only at specific times of the day (UTC)">
+                    <label for="freq_specific" class="mb-0 font-normal">Specific Times</label>
+                </div>
+                <div id="interval_input">
+                    <label for="frequency_value_interval" class="text-sm font-normal">Check every (minutes):</label>
+                    <input type="number" id="frequency_value_interval" name="frequency_value_interval" class="input mt-1" value="60" min="5" title="Number of minutes between checks.">
+                </div>
+                <div id="specific_times_input" style="display: none;">
+                     <label for="frequency_value_specific" class="text-sm font-normal">Check at times (HH:MM, comma-separated, UTC):</label>
+                     <input type="text" id="frequency_value_specific" name="frequency_value_specific" class="input mt-1" placeholder="08:00, 14:00, 20:00" title="Comma-separated list of times (HH:MM format, 24-hour clock, UTC) to perform checks.">
+                 </div>
+                 {# Hidden input to store the actual value based on selection #}
+                 <input type="hidden" id="frequency_value" name="frequency_value" value="60">
+            </div>
+
+            {# AI Focus Area #}
+            <div class="form-group">
+                <label for="ai_focus_area">AI Focus Area</label>
+                <textarea id="ai_focus_area" name="ai_focus_area" class="input" rows="3" placeholder="e.g., Check for changes in the pricing section or main headlines" title="Optional: Provide specific instructions for the AI to focus on when detecting changes (e.g., 'look for price changes', 'check main banner')."></textarea>
+                 <p class="text-muted text-sm mt-1">Guide the AI to look for specific changes.</p>
+            </div>
+
+            {# Monitoring Type - NEW #}
+            <div class="form-group">
+                <label>Monitoring Type</label>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <input type="radio" id="monitor_general" name="monitoring_type" value="general_updates" checked onchange="toggleKeywordsInput()" title="Monitor for general news, summaries, or overall changes.">
+                    <label for="monitor_general" class="mb-0 font-normal">General Updates</label>
+                    <input type="radio" id="monitor_specific" name="monitoring_type" value="specific_elements" onchange="toggleKeywordsInput()" title="Monitor only for changes related to specific keywords or elements (e.g., financial statements, specific product name).">
+                    <label for="monitor_specific" class="mb-0 font-normal">Specific Elements</label>
+                </div>
+            </div>
+
+            {# Monitoring Keywords (Conditional) - NEW #}
+            <div class="form-group" id="monitoring_keywords_input" style="display: none;">
+                 <label for="monitoring_keywords">Keywords for Specific Monitoring (comma-separated)</label>
+                 <textarea id="monitoring_keywords" name="monitoring_keywords" class="input" rows="2" placeholder="e.g., financial statement, earnings report, investor relations" title="Required if 'Specific Elements' is selected. Enter comma-separated keywords or phrases the AI should specifically look for updates on."></textarea>
+                 <p class="text-muted text-sm mt-1">Only changes related to these keywords will trigger notifications.</p>
+             </div>
+
+            {# Proxy Input #}
+            <div class="form-group">
+                 <label for="proxy">Proxy/Tunnel (Optional)</label>
+                 <input type="text" id="proxy" name="proxy" class="input" placeholder="http://user:pass@host:port" title="Optional: Use an HTTP/HTTPS proxy for checks. Format: http://[user:pass@]host:port">
+                 <p class="text-muted text-sm mt-1">Use a proxy for checks (e.g., http://user:pass@host:port).</p>
+             </div>
+
+            {# Test Screenshot Button (Optional) #}
+            {# Consider if this is still needed or if initial check is sufficient #}
+            {# <button type="button" id="test-screenshot-btn" class="btn btn-secondary btn-sm mb-4">Test Screenshot</button> #}
+            {# <div id="test-screenshot-result"></div> #}
+
+            {# Submit and Cancel Buttons #}
+            <div class="form-actions mt-5 pt-4 border-t border-primary">
+                <button type="submit" class="btn" title="Save this new website">Add Website</button>
+                <a href="{{ url_for('dashboard', user_id=user_id) }}" class="btn btn-secondary" title="Cancel and return to dashboard">Cancel</a>
+            </div>
+        </div>
+    </form>
+
+    {# Test Area MOVED Here #}
+    <div class="card mt-6">
+        <h3 class="card-title">Test URL & AI Analysis Before Adding</h3>
+        <p class="text-sm text-muted mb-3">You can test a URL here (use the URL entered above or type a new one) to see if screenshots and AI analysis work before saving the website.</p>
+        <div class="form-group">
+            <label for="test_url">URL to Test</label>
+            <input type="url" id="test_url" class="input" placeholder="Copy URL from above or enter a new one" title="Enter a URL here to test screenshot capture and AI analysis.">
+        </div>
+         <div class="form-group">
+            <label for="test_ai_focus">AI Focus Area (Optional for Test)</label>
+            <input type="text" id="test_ai_focus" class="input" placeholder="e.g., pricing section" title="Optional: Provide an AI focus area for the test run.">
+         </div>
+        <button type="button" id="test-analyze-btn" class="btn btn-secondary" title="Run a test check on the URL below with screenshot and AI analysis.">Test URL & Get AI Description</button>
+        <div id="test-analyze-result" class="mt-4 text-sm"></div>
+        <div id="test-screenshot-preview" class="mt-3" style="max-height: 200px; overflow: hidden;"></div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    function toggleFrequencyInput() {
+        const intervalInput = document.getElementById('interval_input');
+        const specificTimesInput = document.getElementById('specific_times_input');
+        const freqIntervalRadio = document.getElementById('freq_interval');
+        const hiddenValueInput = document.getElementById('frequency_value');
+        const intervalValue = document.getElementById('frequency_value_interval');
+        const specificValue = document.getElementById('frequency_value_specific');
+
+        if (freqIntervalRadio.checked) {
+            intervalInput.style.display = 'block';
+            specificTimesInput.style.display = 'none';
+            hiddenValueInput.value = intervalValue.value;
+        } else {
+            intervalInput.style.display = 'none';
+            specificTimesInput.style.display = 'block';
+            hiddenValueInput.value = specificValue.value;
+        }
+    }
+
+    // Update hidden value when inputs change
+    document.getElementById('frequency_value_interval').addEventListener('input', function() {
+        if (document.getElementById('freq_interval').checked) {
+            document.getElementById('frequency_value').value = this.value;
+        }
+    });
+    document.getElementById('frequency_value_specific').addEventListener('input', function() {
+        if (document.getElementById('freq_specific').checked) {
+            document.getElementById('frequency_value').value = this.value;
+        }
+    });
+
+    // Initial call to set the correct view
+    toggleFrequencyInput();
+
+    // --- NEW: Toggle Keywords Input based on Monitoring Type --- 
+    function toggleKeywordsInput() {
+        const keywordsInputDiv = document.getElementById('monitoring_keywords_input');
+        const specificMonitorRadio = document.getElementById('monitor_specific');
+        const keywordsTextarea = document.getElementById('monitoring_keywords');
+
+        if (specificMonitorRadio.checked) {
+            keywordsInputDiv.style.display = 'block';
+            keywordsTextarea.required = true; // Make required when specific is chosen
+        } else {
+            keywordsInputDiv.style.display = 'none';
+            keywordsTextarea.required = false;
+        }
+    }
+    // Initial call for keywords visibility
+    toggleKeywordsInput();
+    // --- END NEW --- 
+
+    // Update hidden value on form submit (to catch last changes)
+    document.getElementById('add-website-form').addEventListener('submit', function(){
+        toggleFrequencyInput(); // Ensure the correct value is in the hidden input
+    });
+
+    // Optional: Test Screenshot Logic (if button is uncommented)
+    /*
+    const testBtn = document.getElementById('test-screenshot-btn');
+    const testResultDiv = document.getElementById('test-screenshot-result');
+    const urlInput = document.getElementById('url');
+    if(testBtn && testResultDiv && urlInput) {
+        testBtn.addEventListener('click', function() {
+            const url = urlInput.value;
+            if (!url) {
+                testResultDiv.innerHTML = '<p class="text-red-600">Please enter a URL first.</p>';
+                return;
+            }
+            testResultDiv.innerHTML = '<p class="text-muted">Testing screenshot...</p>';
+            testBtn.disabled = true;
+
+            fetch("{{ url_for('test_screenshot_add') }}", { // Make sure route exists and works with POST
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    testResultDiv.innerHTML = `<p class="text-green-600">Success! Screenshot saved (path: ${data.screenshot_path || 'N/A'})</p>`;
+                } else {
+                    testResultDiv.innerHTML = `<p class="text-red-600">Error: ${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Test Screenshot Error:', error);
+                testResultDiv.innerHTML = '<p class="text-red-600">Fetch error during test.</p>';
+            })
+            .finally(() => {
+                testBtn.disabled = false;
+            });
+        });
+    }
+    */
+
+    // --- Test URL & Analyze Logic --- 
+    const testBtn = document.getElementById('test-analyze-btn');
+    const testResultDiv = document.getElementById('test-analyze-result');
+    const testUrlInput = document.getElementById('test_url');
+    const testFocusInput = document.getElementById('test_ai_focus');
+    const testScreenshotPreview = document.getElementById('test-screenshot-preview');
+
+    if(testBtn && testResultDiv && testUrlInput && testFocusInput && testScreenshotPreview) {
+        testBtn.addEventListener('click', function() {
+            const url = testUrlInput.value.trim();
+            const focus = testFocusInput.value.trim();
+            if (!url) {
+                testResultDiv.innerHTML = '<p class="text-error-text">Please enter a URL to test.</p>';
+                testScreenshotPreview.innerHTML = '';
+                return;
+            }
+            testResultDiv.innerHTML = '<p class="text-muted">Testing... (This may take a moment)</p>';
+            testScreenshotPreview.innerHTML = ''; // Clear previous preview
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+
+            fetch("{{ url_for('test_url_and_analyze') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Include CSRF token if needed in your Flask app setup
+                },
+                body: JSON.stringify({ 
+                    url: url,
+                    user_id: '{{ user_id }}', // Send user context if helpful
+                    ai_focus_area: focus // Send focus area
+                 })
+            })
+            .then(response => {
+                 if (!response.ok) {
+                     // Try to get error message from JSON response if possible
+                     return response.json().then(errData => {
+                         throw new Error(errData.message || `HTTP error ${response.status}`);
+                     }).catch(() => {
+                         // Fallback if response is not JSON
+                         throw new Error(`HTTP error ${response.status}`);
+                     });
+                 }
+                 return response.json();
+             })
+            .then(data => {
+                let messageClass = data.success ? 'text-success-text' : 'text-error-text';
+                testResultDiv.innerHTML = `<p class="${messageClass}">${data.message || 'Completed.'}</p>`;
+                
+                // Display screenshot preview if path is returned
+                if (data.screenshot_path) {
+                    const img = document.createElement('img');
+                    img.src = "{{ url_for('serve_data_file', filename='') }}" + data.screenshot_path.split('/').pop(); // Construct URL
+                    img.alt = "Test Screenshot";
+                    img.style.maxWidth = '100%';
+                    img.style.border = '1px solid var(--border-primary)';
+                    img.style.marginTop = '0.5rem';
+                    testScreenshotPreview.appendChild(img);
+                }
+            })
+            .catch(error => {
+                console.error('Test Analyze Error:', error);
+                testResultDiv.innerHTML = `<p class="text-error-text">Error: ${error.message}</p>`;
+                testScreenshotPreview.innerHTML = '';
+            })
+            .finally(() => {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Test URL & Get AI Description';
+            });
+        });
+    }
+
+</script>
+{% endblock %}

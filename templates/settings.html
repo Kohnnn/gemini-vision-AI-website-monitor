@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - {{ user.user_id }} - AI Website Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h2 class="text-2xl font-semibold mb-6">Settings for {{ user.user_id }}</h2>
+
+    {# Main form wrapping all USER settings sections #}
+    {# Note: Admin actions removed from this form #}
+    <form method="post">
+        {# Email Settings Card #}
+        <div class="card mb-6">
+            <div class="card-header">
+                <h3>Email Notifications</h3>
+            </div>
+            <div class="p-6">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" value="{{ user.email or '' }}" class="input" title="Email address for receiving notifications.">
+                    <p class="text-muted mt-1">Leave blank to disable email notifications.</p>
+                </div>
+                <div class="form-actions justify-content-between">
+                    <button type="submit" name="submit_email" class="btn" title="Save email settings">Update Email</button>
+                    <button type="button" class="btn btn-secondary" onclick="testNotification('email')" title="Send a test email to the configured address">Test Email</button>
+                </div>
+            </div>
+        </div>
+
+        {# Telegram Settings Card #}
+        <div class="card mb-6">
+            <div class="card-header">
+                <h3>Telegram Notifications</h3>
+            </div>
+            <div class="p-6">
+                <div class="form-group">
+                    <label for="telegram_token">Custom Telegram Bot Token (Optional)</label>
+                    <input type="password" id="telegram_token" name="telegram_token" value="{{ user.telegram_token or '' }}" class="input" title="Your Telegram Bot Token. Leave blank to use global setting.">
+                    <p class="text-muted mt-1">Leave empty to use the default token from .env file.</p>
+                </div>
+                <div class="form-group">
+                    <label for="telegram_chat_id">Telegram Chat ID</label>
+                    <input type="text" id="telegram_chat_id" name="telegram_chat_id" value="{{ user.telegram_chat_id or '' }}" class="input" title="Your Telegram Chat ID. Leave blank to use global setting.">
+                    <p class="text-muted mt-1">Required for Telegram notifications.<br>Find your chat ID by messaging this bot: <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a><br>Then message this bot: <a href="https://t.me/WebsMonitorBot" target="_blank">@WebsMonitorBot</a> to have it send notifications to you.</p>
+                </div>
+                <div class="form-actions justify-content-between">
+                    <button type="submit" name="submit_telegram" class="btn" title="Save Telegram settings">Update Telegram</button>
+                    <button type="button" class="btn btn-secondary" onclick="testNotification('telegram')" title="Send a test message to the configured Telegram chat">Test Telegram</button>
+                </div>
+            </div>
+        </div>
+
+        {# Teams Settings Card #}
+        <div class="card mb-6">
+            <div class="card-header">
+                <h3>Microsoft Teams Notifications (WIP)</h3>
+            </div>
+            <div class="p-6">
+                <div class="form-group">
+                    <label for="teams_webhook">Teams Webhook URL (Not functional yet)</label>
+                    <input type="password" id="teams_webhook" name="teams_webhook" value="{{ user.teams_webhook or '' }}" class="input" title="Your Microsoft Teams Incoming Webhook URL. Leave blank to use global setting.">
+                    <p class="text-muted mt-1">Leave empty to use the default webhook from .env file.</p>
+                </div>
+                <div class="form-actions justify-content-between">
+                    <button type="submit" name="submit_teams" class="btn" title="Save Teams settings">Update Teams</button>
+                    <button type="button" class="btn btn-secondary" onclick="testNotification('teams')" title="Send a test message to the configured Teams channel">Test Teams</button>
+                </div>
+            </div>
+        </div>
+
+        {# Notification Preferences Card - NEW #}
+        <div class="card mb-6">
+            <div class="card-header">
+                <h3>Notification Timing</h3>
+            </div>
+            <div class="p-6">
+                <div class="form-group mb-4">
+                    <label class="block mb-2">Notification Preference</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center">
+                            <input type="radio" name="notification_preference" value="immediate" class="mr-2" {{ 'checked' if user.notification_preference == 'immediate' }} title="Receive a notification as soon as a change is detected.">
+                            Immediate
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="notification_preference" value="summary" class="mr-2" {{ 'checked' if user.notification_preference == 'summary' }} title="Receive a summary of changes at specific times.">
+                            Daily Summary
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="notification_preference" value="both" class="mr-2" {{ 'checked' if user.notification_preference == 'both' }} title="Receive both immediate notifications and daily summaries.">
+                            Both
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label class="block mb-2">Notification Content</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="notify_only_changes" value="true" class="mr-2" {{ 'checked' if user.notify_only_changes }} title="Only receive notifications when changes are detected.">
+                            Notify only when changes are detected
+                        </label>
+                    </div>
+                    <p class="text-muted mt-1">When checked, you'll only receive notifications for checks that detect changes. When unchecked, you'll get notified of every check regardless of result.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="summary_times">Daily Summary Times (HH:MM, comma-separated)</label>
+                    <input type="text" id="summary_times" name="summary_times" value="{{ user.summary_times or '09:00' }}" class="input" placeholder="e.g., 09:00,17:00" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9](,\s*([0-1]?[0-9]|2[0-3]):[0-5][0-9])*$" title="Enter times in 24-hour format (HH:MM), separated by commas. Example: 09:00,17:00">
+                    <p class="text-muted mt-1">Times when daily summary notifications will be sent (if preference includes 'summary').</p>
+                </div>
+                <div class="form-actions">
+                     <button type="submit" name="submit_notification_prefs" class="btn" title="Save notification timing settings">Update Preferences</button>
+                </div>
+            </div>
+        </div>
+
+        {# Add this section to the settings.html template, preferably right before the Notification Preferences section or as the last form section #}
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>AI System Prompt Configuration</h2>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('update_ai_prompt', user_id=user.user_id) }}" method="post" id="aiPromptForm">
+                    <div class="form-group mb-4">
+                        <label for="ai_compare_prompt">AI Compare Prompt</label>
+                        <textarea class="form-control" id="ai_compare_prompt" name="ai_compare_prompt" rows="3" placeholder="Enter the system prompt for the AI when analyzing website changes...">{{ ai_compare_prompt }}</textarea>
+                        <small class="form-text text-muted">This is the base instruction given to the AI when analyzing website screenshots. Used for the AI Focus Area feature.</small>
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <label for="ai_notification_prompt">AI Notification Prompt</label>
+                        <textarea class="form-control" id="ai_notification_prompt" name="ai_notification_prompt" rows="3" placeholder="Enter the system prompt for generating notification messages...">{{ ai_notification_prompt }}</textarea>
+                        <small class="form-text text-muted">This prompt is used when generating enhanced notification messages for immediate alerts.</small>
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <label for="ai_summary_prompt">AI Summary Prompt</label>
+                        <textarea class="form-control" id="ai_summary_prompt" name="ai_summary_prompt" rows="3" placeholder="Enter the system prompt for generating daily summaries...">{{ ai_summary_prompt }}</textarea>
+                        <small class="form-text text-muted">This prompt is used when generating daily summary notifications that combine multiple website changes.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary" name="submit_ai_prompt">Update AI Prompts</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetAIPrompts()">Reset to Defaults</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {# --- Admin Protected Section [REMOVED FROM UI] --- #}
+        {# The following section is removed from the user interface.
+           Admin actions like testing Gemini and deleting data are now
+           only accessible via direct API calls or a future dedicated admin interface.
+           The backend routes still perform the ADMIN_KEY check if called directly.
+        <div class="card mb-6 border-warning-dark">
+             <div class="card-header bg-warning">
+                 <h3 class="text-warning-text">Admin Actions</h3>
+             </div>
+             <div class="p-6">
+                 <div class="form-group">
+                     <label for="admin_key">Admin Key</label>
+                     <input type="password" id="admin_key" name="admin_key" class="input" required title="Enter the Admin Key defined in your .env file to perform this action.">
+                     <p class="text-muted mt-1">Required for testing Gemini API and deleting data.</p>
+                 </div>
+                 ...
+             </div>
+         </div>
+        #}
+    </form>
+
+    <div class="text-center mt-6">
+        <a href="{{ url_for('dashboard', user_id=user.user_id) }}" class="link-primary">&larr; Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{{ super() }}
+<script>
+function testNotification(type) {
+    const userId = "{{ user.user_id }}";
+    let endpoint = '';
+    
+    if (type === 'email') {
+        endpoint = `/test_email_notification/${userId}`;
+    } else if (type === 'telegram') {
+        endpoint = `/test_telegram_notification/${userId}`;
+    } else if (type === 'teams') {
+        endpoint = `/test_teams_notification/${userId}`;
+    }
+    
+    // Create and submit a form to trigger the POST request
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = endpoint;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function resetAIPrompts() {
+    const defaultPrompts = {
+        ai_compare_prompt: "You are an AI designed to compare screenshots of websites, your purpose is to show the change description. You should be focus on compare old/new screenshot/html only, compare what users want you to focus on. Write me output format to include bullet points with explanation. Summary what user want to compare. Skip what have been cover in the lastest compare description, which include in the page. Be analytical and comprehensive.",
+        ai_notification_prompt: "You are an AI that summarizes the differences between two website screenshots/html based on user-specified criteria, your purpose is to send notification on the summary of what different. Write me output format to include bullet points with explanation. Summary what user want to compare. Skip what have been cover in the lastest notification, which include in the page. Be analytical and comprehensive.",
+        ai_summary_prompt: "You are an AI that generates a consolidated summary of website changes from multiple comparison reports, your purpose is to summary all the send out notification. You will have input from all the AI compare description and summarizes. Write me output format to include bullet points with explanation. Summary what user want to compare. Skip what have been cover in the lastest summary notification. Be analytical and comprehensive."
+    };
+    document.getElementById('ai_compare_prompt').value = defaultPrompts.ai_compare_prompt;
+    document.getElementById('ai_notification_prompt').value = defaultPrompts.ai_notification_prompt;
+    document.getElementById('ai_summary_prompt').value = defaultPrompts.ai_summary_prompt;
+}
+</script>
+{% endblock %}

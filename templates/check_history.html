@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Check History - {{ website.url }} - AI Website Monitor{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-2xl font-semibold">Check History for {{ website.url }}</h2>
+    <a href="{{ url_for('dashboard', user_id=website.user_id) }}" class="btn btn-secondary">&larr; Back to Dashboard</a>
+</div>
+
+{% if checks %}
+    <div class="card-grid history-grid">
+        {% for check in checks %}
+            <div class="card history-card">
+                <div class="card-header-section d-flex justify-content-between align-items-start mb-3">
+                    <div class="check-info">
+                        <h3 class="card-title mb-1">{{ check.checked_at.strftime('%Y-%m-%d %H:%M:%S') }}</h3>
+                        
+                        {% if check.error %}
+                            <span class="status-badge error" title="{{ check.error }}">Error</span>
+                        {% elif check.change_detected %}
+                            <span class="status-badge change" title="Change detected">Change</span>
+                        {% else %}
+                            <span class="status-badge no-change" title="No change detected">No Change</span>
+                        {% endif %}
+                        
+                        {% if check.response_time is not none %}
+                            <span class="text-xs text-muted ml-2">{{ "%.3f"|format(check.response_time) }}s</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Screenshot Preview #}
+                <div class="screenshot-container mb-3">
+                    {% if check.screenshot_path %}
+                        <a href="{{ url_for('serve_data_file', filename=check.screenshot_path.split('/')[-1]) }}" target="_blank" title="View screenshot">
+                            <img src="{{ url_for('serve_data_file', filename=check.screenshot_path.split('/')[-1]) }}" alt="Screenshot" class="history-screenshot">
+                        </a>
+                    {% else %}
+                        <div class="history-screenshot-placeholder">No Screenshot</div>
+                    {% endif %}
+                </div>
+
+                {# AI Description #}
+                <div class="text-sm text-muted mb-3 change-description">
+                    {% if check.ai_description %}
+                        <strong>AI Description:</strong> {{ check.ai_description }}
+                    {% elif check.error %}
+                        <strong class="text-error-text">Error:</strong> {{ check.error }}
+                    {% else %}
+                        <span class="text-muted">No description available</span>
+                    {% endif %}
+                </div>
+
+                {# Action Buttons #}
+                <div class="form-actions mt-auto">
+                    {% if check.screenshot_path %}
+                        <a href="{{ url_for('serve_data_file', filename=check.screenshot_path.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-secondary" title="View Screenshot">Screenshot</a>
+                    {% endif %}
+                    <a href="{{ url_for('visual_diff', website_id=website.id, curr_check_id=check.id) }}" class="btn btn-sm btn-secondary" title="Compare with Previous">Diff</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <p class="text-muted">No check history found for this website.</p>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    // Convert UTC dates to local time
+    function updateTimesToLocalTime() {
+        const timestamps = document.querySelectorAll('.timestamp');
+        timestamps.forEach(timestamp => {
+            const utcDateStr = timestamp.dataset.utc;
+            if (utcDateStr) {
+                const utcDate = new Date(utcDateStr + ' UTC');
+                const localDate = new Date(utcDate);
+                
+                // Update the displayed timestamp with local time
+                timestamp.textContent = localDate.toLocaleString();
+            }
+        });
+    }
+    
+    // Update times when the document is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        updateTimesToLocalTime();
+    });
+</script>
+{% endblock %} 

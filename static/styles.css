@@ -1,0 +1,10 @@
+/* Add new status badge styles for change and no-change */
+.status-badge.change, .status-badge.warning {
+    background-color: #ff9800; /* Orange */
+    color: white;
+}
+
+.status-badge.no-change {
+    background-color: #2196f3; /* Blue */
+    color: white;
+} 

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Visual Diff - {{ website.url }} - AI Website Monitor{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-2xl font-semibold">Visual Diff for {{ website.url }}</h2>
+    <a href="{{ url_for('history', website_id=website.id) }}" class="btn btn-secondary">&larr; Back to History</a>
+</div>
+
+<div class="card">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <h3 class="text-lg font-medium mb-2">Previous Screenshot</h3>
+            {% if prev_screenshot %}
+                <a href="{{ url_for('serve_data_file', filename=prev_screenshot.split('/')[-1]) }}" target="_blank">
+                    <img src="{{ url_for('serve_data_file', filename=prev_screenshot.split('/')[-1]) }}" alt="Previous Screenshot" class="diff-img">
+                </a>
+            {% else %}
+                <p class="text-muted">No previous screenshot available.</p>
+            {% endif %}
+        </div>
+        <div>
+            <h3 class="text-lg font-medium mb-2">Current Screenshot</h3>
+             {% if curr_screenshot %}
+                <a href="{{ url_for('serve_data_file', filename=curr_screenshot.split('/')[-1]) }}" target="_blank">
+                    <img src="{{ url_for('serve_data_file', filename=curr_screenshot.split('/')[-1]) }}" alt="Current Screenshot" class="diff-img">
+                </a>
+             {% else %}
+                 <p class="text-muted">No current screenshot available.</p>
+             {% endif %}
+        </div>
+    </div>
+
+    {# Optional: Text Diff Display #}
+    {#
+    {% if diff_path %}
+        <div class="mt-6 pt-4 border-t border-primary">
+            <h3 class="text-lg font-medium mb-2">Text Diff</h3>
+            <pre><code>{{ include(diff_path) }}</code></pre>
+        </div>
+    {% endif %}
+    #}
+</div>
+{% endblock %}

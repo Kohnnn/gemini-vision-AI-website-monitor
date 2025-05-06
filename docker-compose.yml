@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+
+  web:
+    build: .
+    command: >
+      sh -c "chmod +x /app/start_playwright_server.sh && 
+             python -c 'from app import create_app; app = create_app(); app.app_context().push(); from app import db; db.create_all()' && 
+             waitress-serve --port=5000 --call app:create_app"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_DEBUG=0
+      - REDIS_URL=redis://redis:6379
+      - DOCKER_ENV=true
+      - TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  rq-worker:
+    build: .
+    command: >
+      sh -c "chmod +x /app/start_playwright_server.sh && 
+             python -m rq.cli worker default --url redis://redis:6379 --worker-class app.WindowsSimpleWorker --with-scheduler --verbose"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DOCKER_ENV=true
+      - PYTHONUNBUFFERED=1
+      - PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
+      - TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      - redis
+      - web
+    restart: unless-stopped
+
+volumes:
+  redis_data: 

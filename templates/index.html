@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - AI Website Monitor{% endblock %}
+
+{% block content %}
+{# --- Changelog Section --- #}
+<div class="card changelog-container mb-6">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="card-title mb-0">Changelog</h2>
+        <button id="toggle-changelog-btn" class="btn btn-sm btn-secondary">Show More</button>
+    </div>
+    
+    <div class="changelog-content">
+        <div class="changelog-short">
+            <div class="changelog-entry">
+                <span class="changelog-date">2025-05-07</span>
+                <strong>v0.4.5</strong> - Enhanced Status Visualization & Public DNS Support
+                <ul>
+                    <li>Use public DNS for by pass the ISP DNS block</li>
+                    <li>Added change detection to the dashboard</li>
+                    <li>Fixed DATA_DIR configuration and added fallback mechanisms</li>
+                    <li>Improved error handling for websites refusing connections</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="changelog-full" style="display: none;">
+            <div class="changelog-entry">
+                <span class="changelog-date">2025-05-07</span>
+                <strong>v0.4.0</strong> - Enhanced Status Visualization & Cross-Platform Support
+                <ul>
+                    <li>Improved dashboard UI with meaningful status indicators (Change/No change)</li>
+                    <li>Enhanced change detection using AI description analysis</li>
+                    <li>Added email and telegram notification</li>
+                    <li>Better notification filtering to reduce alert fatigue</li>
+                    <li>Added cross-platform support with Docker/Linux environment scripts</li>
+                    <li><strong>Important:</strong> Docker containers now configured to use host server's timezone</li>
+                </ul>
+            </div>
+            
+            <div class="changelog-entry">
+                <span class="changelog-date">2024-03-15</span>
+                <strong>v0.3.5</strong> - System Reliability & Configuration
+                <ul>
+                    <li>Added configurable AI system prompts</li>
+                    <li>Fixed timezone and dark mode flash issues</li>
+                    <li>Enhanced scheduler and notification system diagnostics</li>
+                    <li>Improved error detection in notifications</li>
+                    <li>Added better job failure handling</li>
+                </ul>
+            </div>
+            
+            <div class="changelog-entry">
+                <span class="changelog-date">2024-01-10</span>
+                <strong>v0.3.0</strong> - Enhanced History View
+                <ul>
+                    <li>Grid layout for check history</li>
+                    <li>Improved screenshot display</li>
+                    <li>Better error handling</li>
+                    <li>Added local timezone display</li>
+                </ul>
+            </div>
+            
+            <div class="changelog-entry">
+                <span class="changelog-date">2023-11-20</span>
+                <strong>v0.2.0</strong> - Visual Diff & Performance
+                <ul>
+                    <li>Added visual diff comparison tool</li>
+                    <li>Optimized background check process</li>
+                    <li>Added user settings page</li>
+                    <li>Implemented AI monitoring flexibility (general vs. specific elements)</li>
+                    <li>Added notification flexibility (immediate vs. daily summary)</li>
+                </ul>
+            </div>
+            
+            <div class="changelog-entry">
+                <span class="changelog-date">2023-10-05</span>
+                <strong>v0.1.5</strong> - Improved UI & Notifications
+                <ul>
+                    <li>Redesigned dashboard with grid view</li>
+                    <li>Added email notifications</li>
+                    <li>Improved AI descriptions</li>
+                    <li>Enhanced screenshot capture reliability</li>
+                </ul>
+            </div>
+            
+            <div class="changelog-entry">
+                <span class="changelog-date">2023-09-15</span>
+                <strong>v0.1.0</strong> - Initial Release
+                <ul>
+                    <li>Website monitoring and screenshots</li>
+                    <li>AI-powered change detection</li>
+                    <li>User management system</li>
+                    <li>Basic dashboard functionality</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    {# --- Create New User Card (Moved Above) --- #}
+    <div class="card">
+        <h2 class="card-title">Create New User ID</h2>
+        <p class="text-muted mb-4">Enter a unique User ID to create a new dashboard.</p>
+        <form id="create-user-form" method="GET" action="#"> {# Use JS to navigate #}
+            <div class="form-group">
+                <label for="user_id_input">New User ID</label>
+                <input type="text" id="user_id_input" name="user_id" class="input" placeholder="e.g., my-project-monitor" required title="Enter a unique ID for your new user.">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn">Create & Go</button>
+            </div>
+        </form>
+    </div>
+
+    {# --- Existing Users Card --- #}
+    <div class="card">
+        <h2 class="card-title">Select Existing User ID</h2>
+        {% if users %}
+            <div class="table-responsive mb-4">
+                <table id="user-table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('dashboard', user_id=user.user_id) }}" class="link-primary font-semibold" title="Go to {{ user.user_id }} dashboard">{{ user.user_id }}</a>
+                            </td>
+                            <td class="text-muted">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('dashboard', user_id=user.user_id) }}" class="btn btn-sm" title="Select User">Select</a>
+                                    {# Link to settings page instead of separate edit #}
+                                    <a href="{{ url_for('settings', user_id=user.user_id) }}" class="btn btn-sm btn-secondary" title="Edit Settings">Settings</a>
+                                    <form action="{{ url_for('delete_user_post', user_id=user.user_id) }}" method="post" onsubmit="return confirm('Delete user {{ user.user_id }} and all associated websites/history? This cannot be undone.');" class="inline">
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Delete User">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No existing users found.</p>
+        {% endif %}
+    </div>
+
+</div> {# End of the main grid #}
+
+{# --- System Check Section (New Container Below) --- #}
+<div class="card mt-6 max-w-md mx-auto">
+    <h3 class="card-title">System Check</h3>
+    <p class="text-muted mb-3">Test connectivity to the Gemini API.</p>
+    <button id="test-api-btn" class="btn btn-secondary btn-sm">Test API Connection</button>
+    <div id="api-test-result" class="mt-3 text-sm"></div> {# Increased top margin #}
+</div>
+
+{# --- Admin Section Trigger --- #}
+<div class="text-center mt-4">
+    <button id="toggle-admin-btn" class="link text-xs text-muted">Admin Actions</button>
+</div>
+
+{# --- Hidden Admin Section --- #}
+<div id="admin-section" class="card mt-4 max-w-md mx-auto" style="display: none;">
+    <h3 class="card-title">Admin Actions</h3>
+    <p class="text-muted mb-4">Requires ADMIN_KEY.</p>
+    <div class="form-group">
+        <label for="admin_key_input">Admin Key</label>
+        <input type="password" id="admin_key_input" name="admin_key" class="input" placeholder="Enter Admin Key">
+    </div>
+    
+    <div class="mt-4">
+        <h4 class="font-semibold">Data Cleanup</h4>
+        <p class="text-xs text-muted mb-2">Remove old screenshot files, HTML snapshots, and history records.</p>
+        <form id="cleanup-data-form" action="{{ url_for('admin_cleanup_data') }}" method="post" class="mb-2">
+            <input type="hidden" name="user_id" value="" id="cleanup-user-id">
+            <input type="hidden" name="admin_key" value="" id="cleanup-admin-key">
+            <button type="button" id="cleanup-all-btn" class="btn btn-warning btn-sm">Clean Data Older Than 1 Month</button>
+        </form>
+        <div id="cleanup-result" class="text-xs"></div>
+    </div>
+    
+    <p class="text-xs text-muted mt-2">Note: Admin actions like full API key validation and data deletion are also available on the User Settings page.</p>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    // --- Changelog Toggle ---
+    const toggleChangelogBtn = document.getElementById('toggle-changelog-btn');
+    const changelogFull = document.querySelector('.changelog-full');
+    
+    if (toggleChangelogBtn && changelogFull) {
+        toggleChangelogBtn.addEventListener('click', function() {
+            if (changelogFull.style.display === 'none') {
+                changelogFull.style.display = 'block';
+                toggleChangelogBtn.textContent = 'Show Less';
+            } else {
+                changelogFull.style.display = 'none';
+                toggleChangelogBtn.textContent = 'Show More';
+            }
+        });
+    }
+
+    // --- Admin Section Toggle ---
+    const toggleAdminBtn = document.getElementById('toggle-admin-btn');
+    const adminSection = document.getElementById('admin-section');
+    if (toggleAdminBtn && adminSection) {
+        toggleAdminBtn.addEventListener('click', function() {
+            if (adminSection.style.display === 'none') {
+                adminSection.style.display = 'block';
+                toggleAdminBtn.textContent = 'Hide Admin Actions';
+            } else {
+                adminSection.style.display = 'none';
+                toggleAdminBtn.textContent = 'Admin Actions';
+            }
+        });
+    }
+
+    // --- Data Cleanup Action ---
+    const cleanupBtn = document.getElementById('cleanup-all-btn');
+    const adminKeyInput = document.getElementById('admin_key_input');
+    const cleanupForm = document.getElementById('cleanup-data-form');
+    const cleanupAdminKey = document.getElementById('cleanup-admin-key');
+    const cleanupResult = document.getElementById('cleanup-result');
+    
+    if (cleanupBtn && adminKeyInput && cleanupForm && cleanupAdminKey) {
+        cleanupBtn.addEventListener('click', function() {
+            const adminKey = adminKeyInput.value.trim();
+            if (!adminKey) {
+                cleanupResult.textContent = 'Please enter the Admin Key';
+                cleanupResult.className = 'text-xs text-error-text';
+                adminKeyInput.focus();
+                return;
+            }
+            
+            // Set the admin key in the hidden form field
+            cleanupAdminKey.value = adminKey;
+            
+            // Confirm before proceeding
+            if (confirm('This will permanently delete ALL data older than 1 month for ALL users. Continue?')) {
+                cleanupResult.textContent = 'Processing...';
+                cleanupResult.className = 'text-xs text-muted';
+                cleanupForm.submit();
+            }
+        });
+    }
+
+    document.getElementById('create-user-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
+        const userIdInput = document.getElementById('user_id_input');
+        const userId = userIdInput.value.trim();
+        if (userId) {
+            // Basic validation: check if user ID already exists in the table
+            const userTable = document.getElementById('user-table');
+            let userExists = false;
+            if (userTable) {
+                const userLinks = userTable.querySelectorAll('tbody td:first-child a');
+                for (let link of userLinks) {
+                    if (link.textContent.trim() === userId) {
+                        userExists = true;
+                        break;
+                    }
+                }
+            }
+
+            if (userExists) {
+                if (confirm(`User ID "${userId}" already exists. Go to their dashboard?`)) {
+                    window.location.href = `/dashboard/${encodeURIComponent(userId)}`;
+                }
+            } else {
+                 // Navigate to the dashboard URL, Flask route will handle creation
+                 window.location.href = `/dashboard/${encodeURIComponent(userId)}`;
+            }
+        } else {
+            userIdInput.focus();
+            alert('Please enter a User ID.');
+        }
+    });
+
+    // API Test Button Logic
+    const testApiBtn = document.getElementById('test-api-btn');
+    const apiResultDiv = document.getElementById('api-test-result');
+    if (testApiBtn && apiResultDiv) {
+        testApiBtn.addEventListener('click', function() {
+            apiResultDiv.textContent = 'Testing...';
+            apiResultDiv.className = 'mt-3 text-sm text-muted'; // Reset style, ensure margin
+            testApiBtn.disabled = true; // Disable button during test
+            fetch("{{ url_for('test_gemini_api_simple') }}", {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+             })
+            .then(data => {
+                if (data.success) {
+                    apiResultDiv.textContent = `Success: ${data.ai_result}`;
+                    apiResultDiv.classList.remove('text-muted');
+                    apiResultDiv.classList.add('text-success-text'); // Use success color
+                } else {
+                    apiResultDiv.textContent = `Error: ${data.error}`;
+                    apiResultDiv.classList.remove('text-muted');
+                    apiResultDiv.classList.add('text-error-text'); // Use an error color
+                }
+            })
+            .catch(error => {
+                console.error('API Test Fetch Error:', error);
+                apiResultDiv.textContent = `Fetch Error: Could not reach test endpoint. ${error.message}`;
+                 apiResultDiv.classList.remove('text-muted');
+                 apiResultDiv.classList.add('text-error-text');
+             })
+            .finally(() => {
+                 testApiBtn.disabled = false; // Re-enable button
+            });
+        });
+    }
+
+</script>
+{% endblock %}
