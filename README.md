@@ -9,14 +9,9 @@ A robust website monitoring solution with AI-powered change detection, screensho
 - **AI Change Detection**: Use Gemini Vision API (`gemini-1.5-flash-latest`) for intelligent change summaries, respecting user-defined focus areas.
 - **Screenshots**: Capture full-page screenshots using a local Playwright server.
 - **Notifications**: Receive alerts via Email, Telegram, and Microsoft Teams.
-- **UI/UX:**
-    - Modern UI with persistent dark mode.
-    - Dashboard with List/Grid view options.
-    - Base template ensures consistency across pages.
-    - Local timezone display for all timestamps.
 - **Manual & Scheduled Checks**: Trigger checks on demand (with immediate feedback) or automatically via background worker (manual start required).
 - **Test URL & Analyze:** Pre-flight check on Add Website page to verify URL, screenshot, and AI analysis.
-- **Data Cleanup**: Manually delete old check history and associated files.
+- **Data Cleanup**: Delete old check history and associated files.
 
 ---
 
@@ -42,9 +37,13 @@ pip install -r requirements.txt
   - Email SMTP settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`)
   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (Optional, for Telegram notifications)
   - `TEAMS_WEBHOOK_URL` (Optional, for Teams notifications)
-  - `GEMINI_API_KEY` (Required for AI analysis)
+  - `GEMINI_API_KEY1` (Required for AI analysis)
+  - `GEMINI_API_KEY2` (Support multiple API keys)
   - `ADMIN_KEY` (Optional, for accessing admin functions via API)
   - `SECRET_KEY` (For Flask session security)
+  - `AI_COMPARE_SYSTEM_PROMPT` (Prompt for compare of websites)
+  - `AI_NOTIFICATION_SYSTEM_PROMPT` (Prompt to summarizes the differences)
+  - `AI_NOTIFICATION_SUMMARY_SYSTEM_PROMPT` (Prompt to generates a consolidated summary of changes)
 - Ensure Redis is running.
 
 ### 4. Running the App (Manual Start Recommended)
@@ -218,6 +217,11 @@ For Windows users, several batch files are included for convenience:
 - Improved time-based scheduling in containerized environments
 
 ## How to Start the Application
-1. Ensure Redis is running
-2. Run the `start_website_monitor.bat` script
-3. Access the application at http://127.0.0.1:5000
+Read DOCKER_README.md
+or run
+```
+git clone https://github.com/Kohnnn/AI_Website_Monitor
+cd AI_Website_Monitor
+docker compose up --build
+```
+
