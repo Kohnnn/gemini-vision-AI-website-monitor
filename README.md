@@ -37,9 +37,13 @@ pip install -r requirements.txt
   - Email SMTP settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`)
   - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (Optional, for Telegram notifications)
   - `TEAMS_WEBHOOK_URL` (Optional, for Teams notifications)
-  - `GEMINI_API_KEY` (Required for AI analysis)
+  - `GEMINI_API_KEY1` (Required for AI analysis)
+  - `GEMINI_API_KEY2` (Support multiple API keys)
   - `ADMIN_KEY` (Optional, for accessing admin functions via API)
   - `SECRET_KEY` (For Flask session security)
+  - `AI_COMPARE_SYSTEM_PROMPT` (Prompt for compare of websites)
+  - `AI_NOTIFICATION_SYSTEM_PROMPT` (Prompt to summarizes the differences)
+  - `AI_NOTIFICATION_SUMMARY_SYSTEM_PROMPT` (Prompt to generates a consolidated summary of changes)
 - Ensure Redis is running.
 
 ### 4. Running the App (Manual Start Recommended)
