@@ -14,12 +14,14 @@ services:
   web:
     build: .
     command: >
-      sh -c "chmod +x /app/start_playwright_server.sh && 
+      sh -c "sed -i 's/\r$//' /app/start_playwright_server.sh && 
+             chmod +x /app/start_playwright_server.sh &&
              python -c 'from app import create_app; app = create_app(); app.app_context().push(); from app import db; db.create_all()' && 
              waitress-serve --port=5000 --call app:create_app"
     volumes:
       - .:/app
       - ./data:/app/data
+      - playwright_browsers:/app/ms-playwright
     ports:
       - "5000:5000"
     devices:
@@ -31,18 +33,27 @@ services:
       - REDIS_URL=redis://redis:6379
       - DOCKER_ENV=true
       - TZ=Asia/Ho_Chi_Minh
+      - PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
     depends_on:
       - redis
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   rq-worker:
     build: .
     command: >
-      sh -c "chmod +x /app/start_playwright_server.sh && 
+      sh -c "sed -i 's/\r$//' /app/start_playwright_server.sh && 
+             chmod +x /app/start_playwright_server.sh &&
+             /app/start_playwright_server.sh &
+             sleep 10 &&
              python -m rq.cli worker default --url redis://redis:6379 --worker-class app.WindowsSimpleWorker --with-scheduler --verbose"
     volumes:
       - .:/app
       - ./data:/app/data
+      - playwright_browsers:/app/ms-playwright
     devices:
       - /dev/random:/dev/random
       - /dev/urandom:/dev/urandom
@@ -56,6 +67,11 @@ services:
       - redis
       - web
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
 volumes:
-  redis_data: 
+  redis_data:
+  playwright_browsers: 

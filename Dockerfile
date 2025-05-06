@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     curl \
+    dos2unix \
     libgconf-2-4 \
     ca-certificates \
     fonts-liberation \
@@ -61,48 +62,37 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set environment variable for Playwright browser path - MUST be before installation
+# Create browser directory first and set permissions
+RUN mkdir -p /app/ms-playwright && \
+    chmod -R 777 /app/ms-playwright
+
+# Set environment variables for Playwright
+ENV PYTHONUNBUFFERED=1
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
+ENV FLASK_APP=app.py
+ENV DOCKER_ENV=true
 
-# Install Playwright with browsers - ensure correct install location
+# Install Playwright with specific browser path
 RUN pip install playwright && \
-    python -m playwright install chromium && \
-    python -m playwright install-deps chromium
-
-# Make start_playwright_server.sh executable
-COPY start_playwright_server.sh /app/
-RUN chmod +x /app/start_playwright_server.sh && \
-    # Convert Windows line endings to Unix
-    sed -i 's/\r$//' /app/start_playwright_server.sh
-
-# Install Playwright using npm for server mode (redundant but for compatibility)
-RUN npm init -y && \
-    npm install playwright@latest && \
-    mkdir -p /app/ms-playwright && \
-    npx playwright install chromium && \
-    npx playwright install-deps chromium
+    PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright python -m playwright install chromium --with-deps
 
 # Copy the application code
 COPY . .
+
+# Fix line endings for shell scripts
+RUN find . -type f -name "*.sh" -exec dos2unix {} \;
+RUN chmod +x /app/start_playwright_server.sh
 
 # Create data directory and ensure correct permissions
 RUN mkdir -p data && \
     chmod -R 755 /app
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV FLASK_APP=app.py
-ENV DOCKER_ENV=true
-
 # Additional Playwright check
-RUN ls -la /app/ms-playwright || echo "Playwright browser directory not found"
-RUN python -c "from playwright.sync_api import sync_playwright; print('Playwright works!')" || echo "Playwright check failed"
+RUN find /app/ms-playwright -type f -name "chrome*" | grep .
+RUN ls -la /app/ms-playwright/*/chrome-linux/chrome || ls -la /app/ms-playwright
 
 # Expose the port
 EXPOSE 5000
-
-# Database initialization will be done at runtime, not during build
-# since Redis connection is needed but Redis service isn't available during build
 
 # Default command (will be overridden by docker-compose)
 CMD ["waitress-serve", "--port=5000", "--call", "app:create_app"] 
