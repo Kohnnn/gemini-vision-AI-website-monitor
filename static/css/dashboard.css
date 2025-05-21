@@ -1,0 +1,218 @@
+/* Dashboard styles */
+
+/* Grid View styling */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.dashboard-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.dashboard-screenshot {
+    width: 100%;
+    height: auto;
+    max-height: 240px;
+    object-fit: contain;
+    background-color: var(--card-bg-light);
+    border: 1px solid var(--border-color);
+}
+
+.dashboard-screenshot-placeholder {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--card-bg-light);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+}
+
+/* List View styling */
+.table-responsive {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.table-responsive table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0;
+}
+
+.table-responsive th,
+.table-responsive td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-primary);
+    text-align: left;
+}
+
+.table-responsive th {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+.table-responsive tr:hover {
+    background-color: var(--bg-tertiary);
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.active {
+    background-color: #3f51b5;
+    color: white;
+}
+
+.status-badge.no-change {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.status-badge.warning,
+.status-badge.change {
+    background-color: #ff9800;
+    color: black;
+}
+
+.status-badge.error {
+    background-color: #f44336;
+    color: white;
+}
+
+.status-badge.checking {
+    background-color: #2196F3;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.7;
+    }
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 10;
+}
+
+.spinner {
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+.spinner-sm {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--text-primary);
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Screenshot container positioning */
+.screenshot-container {
+    position: relative;
+    width: 100%;
+}
+
+/* Custom tooltip */
+.custom-tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    z-index: 100;
+    max-width: 300px;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+/* Dashboard view containers */
+.dashboard-view.card-grid {
+    display: grid;
+}
+
+.dashboard-view .card {
+    padding: 1rem;
+}
+
+/* Make sure action buttons don't break layout */
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.form-actions .btn {
+    white-space: nowrap;
+}
+
+/* Timestamp and headings */
+.timestamp {
+    white-space: nowrap;
+}
+
+.card-header-section {
+    justify-content: space-between;
+}
+
+/* Dark mode adjustments */
+.dark .table-responsive th {
+    background-color: var(--bg-secondary-dark);
+    color: var(--text-primary-dark);
+}
+
+.dark .table-responsive tr:hover {
+    background-color: var(--bg-tertiary-dark);
+} 

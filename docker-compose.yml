@@ -14,7 +14,7 @@ services:
   web:
     build: .
     command: >
-      sh -c "sed -i 's/\r$//' /app/start_playwright_server.sh && 
+      bash -c "sed -i 's/\r$//' /app/start_playwright_server.sh && 
              chmod +x /app/start_playwright_server.sh &&
              python -c 'from app import create_app; app = create_app(); app.app_context().push(); from app import db; db.create_all()' && 
              waitress-serve --port=5000 --call app:create_app"
@@ -45,10 +45,14 @@ services:
   rq-worker:
     build: .
     command: >
-      sh -c "sed -i 's/\r$//' /app/start_playwright_server.sh && 
+      bash -c "set -e &&
+             sed -i 's/\r$//' /app/start_playwright_server.sh && 
              chmod +x /app/start_playwright_server.sh &&
-             /app/start_playwright_server.sh &
-             sleep 10 &&
+             echo 'Installing Playwright browsers' &&
+             python -m playwright install chromium &&
+             echo 'Starting worker and Playwright server' &&
+             bash /app/start_playwright_server.sh & 
+             sleep 14 &&
              python -m rq.cli worker default --url redis://redis:6379 --worker-class app.WindowsSimpleWorker --with-scheduler --verbose"
     volumes:
       - .:/app

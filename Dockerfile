@@ -72,24 +72,19 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
 ENV FLASK_APP=app.py
 ENV DOCKER_ENV=true
 
-# Install Playwright with specific browser path
-RUN pip install playwright && \
-    PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright python -m playwright install chromium --with-deps
+# Install Playwright but don't install browsers yet (will be installed during runtime)
+RUN pip install playwright
 
 # Copy the application code
 COPY . .
 
-# Fix line endings for shell scripts
+# Fix line endings for shell scripts and make them executable
 RUN find . -type f -name "*.sh" -exec dos2unix {} \;
 RUN chmod +x /app/start_playwright_server.sh
 
 # Create data directory and ensure correct permissions
 RUN mkdir -p data && \
     chmod -R 755 /app
-
-# Additional Playwright check
-RUN find /app/ms-playwright -type f -name "chrome*" | grep .
-RUN ls -la /app/ms-playwright/*/chrome-linux/chrome || ls -la /app/ms-playwright
 
 # Expose the port
 EXPOSE 5000

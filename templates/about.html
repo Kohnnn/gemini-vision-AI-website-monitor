@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}About - AI Website Monitor{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>About AI Website Monitor</h2>
+    
+    <p>AI Website Monitor is a powerful tool designed to keep track of changes on your favorite websites. Using advanced AI technology, it can detect and analyze visual changes, providing you with timely notifications when something important happens.</p>
+    
+    <h3>Key Features</h3>
+    <ul>
+        <li><strong>AI-Powered Analysis:</strong> Uses Google's Gemini Vision API to intelligently detect and describe changes</li>
+        <li><strong>Custom Focus Areas:</strong> Tell the AI what aspects of websites matter most to you</li>
+        <li><strong>Multiple Notification Options:</strong> Get alerts via email, Telegram, or Microsoft Teams</li>
+        <li><strong>Flexible Scheduling:</strong> Set custom check intervals for each website</li>
+        <li><strong>Visual History:</strong> Browse through a timeline of screenshots to see how websites evolve</li>
+        <li><strong>Proxy Support:</strong> Monitor websites that might be region-restricted</li>
+    </ul>
+    
+    <h3>How It Works</h3>
+    <ol>
+        <li>Add websites you want to monitor</li>
+        <li>Our system captures screenshots at your specified intervals</li>
+        <li>AI compares new screenshots with previous ones</li>
+        <li>If changes are detected, you receive notifications based on your preferences</li>
+        <li>View detailed history and analysis of all changes</li>
+    </ol>
+    
+    <h3>Technology Stack</h3>
+    <p>AI Website Monitor is built using Python, Flask, SQLAlchemy, Redis Queue, and Playwright for browser automation. The AI analysis is powered by Google's Gemini Vision API.</p>
+    
+    <div class="mt-4">
+        <a href="/" class="btn">Back to Home</a>
+    </div>
+</div>
+{% endblock %} 

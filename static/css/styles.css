@@ -1,0 +1,32 @@
+/* Table styles for List View */
+.table-responsive {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.table-responsive table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.table-responsive th,
+.table-responsive td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.table-responsive th {
+  background-color: var(--card-bg);
+  color: var(--heading-color);
+  font-weight: bold;
+}
+
+.table-responsive tr:hover {
+  background-color: var(--hover-bg);
+}
+
+.dashboard-view .card {
+  padding: 1rem;
+} 

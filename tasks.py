@@ -117,13 +117,59 @@ def check_website(website_id, retry_count=0, max_retries=3):
             send_email_notification(user, f'Website Monitor CAPTCHA: {website.url}', 'CAPTCHA detected during screenshot capture. Please solve it manually.')
             return # Stop processing if CAPTCHA is detected during screenshot
 
-    ai_description = gemini_vision_api_compare(
-        html=None, # Pass None for HTML if only using image
-        screenshot_path=screenshot_path, # Pass absolute path to AI func
+    ai_response = gemini_vision_api_compare(
+        html=None,  # We're using just the screenshot for direct checks
+        screenshot_path=screenshot_path,
         monitoring_type=website.monitoring_type,
         monitoring_keywords=website.monitoring_keywords,
-        ai_focus_area=website.ai_focus_area
+        ai_focus_area=website.ai_focus_area,
+        gemini_model="gemini-2.5-flash-preview-05-20"
     )
+    logger.debug(f"AI response: {ai_response}")
+    try:
+        ai_data = json.loads(ai_response)
+    except Exception as e:
+        ai_data = {
+            "change_detected": False,
+            "significance_level": "none",
+            "summary_of_changes": "AI output error.",
+            "detailed_changes": [],
+            "focus_area_assessment": "",
+            "error_message": str(e)
+        }
+    # Notification message formatting
+    url = website.url
+    dt_str = now.strftime('%Y-%m-%d at %H:%M:%S')
+    focus = ai_data.get("focus_area_assessment", "")
+    if ai_data.get("change_detected"):
+        level = ai_data.get("significance_level", "medium").capitalize()
+        summary = ai_data.get("summary_of_changes", "")
+        details = ai_data.get("detailed_changes", [])
+        emoji = {"low": "🟢", "medium": "🟡", "high": "🔴", "critical": "🔴"}.get(ai_data.get("significance_level", "medium"), "🟡")
+        details_str = "\n".join(f"- {d}" for d in details) if details else ""
+        body = (
+            f"AI Check for {url}:\n"
+            f"{emoji} {level} change detected: {summary}\n\n"
+            f"Details:\n{details_str}\n\n"
+            f"Focus: {focus}\n"
+            f"⏱️ Check performed on {dt_str}"
+        )
+    else:
+        body = (
+            f"AI Check for {url}:\n"
+            f"❌ No significant changes detected\n\n"
+            f"Focus: {focus}\n"
+            f"⏱️ Check performed on {dt_str}"
+        )
+    # Store parsed fields for frontend/API
+    ai_description = ai_data.get("summary_of_changes", "No significant change.")
+    ai_significance = ai_data.get("significance_level", "none")
+    ai_detailed = ai_data.get("detailed_changes", [])
+    ai_focus = ai_data.get("focus_area_assessment", "")
+    ai_change = ai_data.get("change_detected", False)
+    ai_error = ai_data.get("error_message", None)
+    # Example: Save these fields in CheckHistory or API response for frontend
+    # (Frontend should use these fields, not the raw JSON)
     
     # Determine if changes were detected based on AI description
     change_indicators = ["website changed", "change detected", "difference found", "new content"]
@@ -321,7 +367,7 @@ def check_website(website_id, retry_count=0, max_retries=3):
 # --- Direct Execution Function for Manual Checks / Initial Check ---
 def check_website_direct(website_id):
     """Direct execution version of check_website.\nTakes screenshot, gets HTML, calls AI for description, saves history.\nReturns tuple: (success_boolean, message_string, screenshot_path, ai_description)\n"""
-    logger.debug(f"Starting direct website check for ID: {website_id}") # Added logging
+    logger.info(f"[ManualCheck] Starting direct website check for ID: {website_id} at {datetime.now().isoformat()}")
     # Import necessary components locally
     from app import app, db, Website, CheckHistory, User, safe_filename, gemini_vision_api_compare, send_email_notification, send_telegram_notification, send_teams_notification # Import needed functions locally
     from browser_agent.screenshot import get_screenshot_playwright
@@ -405,7 +451,7 @@ def check_website_direct(website_id):
                     if current_proxy:
                         logger.info(f"Using proxy: {current_proxy}")
                     
-                    screenshot_success, screenshot_message = get_screenshot_playwright(
+                    screenshot_success, screenshot_message, _ = get_screenshot_playwright(
                         website.url, 
                         screenshot_path, 
                         proxy=current_proxy
@@ -441,15 +487,61 @@ def check_website_direct(website_id):
                 
                 return False, error_message, None, None
             
-            # Step 2: Get AI description
-            ai_description = gemini_vision_api_compare(
+            # Step 2: Get AI description (now expects JSON from AI_COMPARE_SYSTEM_PROMPT)
+            ai_response = gemini_vision_api_compare(
                 html=None,  # We're using just the screenshot for direct checks
                 screenshot_path=screenshot_path,
                 monitoring_type=website.monitoring_type,
                 monitoring_keywords=website.monitoring_keywords,
-                ai_focus_area=website.ai_focus_area
+                ai_focus_area=website.ai_focus_area,
+                gemini_model="gemini-2.5-flash-preview-05-20"
             )
-            logger.debug(f"AI description generated: {ai_description[:100]}...")
+            logger.debug(f"AI response: {ai_response}")
+            import json
+            try:
+                ai_data = json.loads(ai_response)
+            except Exception as e:
+                ai_data = {
+                    "change_detected": False,
+                    "significance_level": "none",
+                    "summary_of_changes": "AI output error.",
+                    "detailed_changes": [],
+                    "focus_area_assessment": "",
+                    "error_message": str(e)
+                }
+            # Notification message formatting
+            url = website.url
+            dt_str = now.strftime('%Y-%m-%d at %H:%M:%S')
+            focus = ai_data.get("focus_area_assessment", "")
+            if ai_data.get("change_detected"):
+                level = ai_data.get("significance_level", "medium").capitalize()
+                summary = ai_data.get("summary_of_changes", "")
+                details = ai_data.get("detailed_changes", [])
+                emoji = {"low": "🟢", "medium": "🟡", "high": "🔴", "critical": "🔴"}.get(ai_data.get("significance_level", "medium"), "🟡")
+                details_str = "\n".join(f"- {d}" for d in details) if details else ""
+                body = (
+                    f"AI Check for {url}:\n"
+                    f"{emoji} {level} change detected: {summary}\n\n"
+                    f"Details:\n{details_str}\n\n"
+                    f"Focus: {focus}\n"
+                    f"⏱️ Check performed on {dt_str}"
+                )
+            else:
+                body = (
+                    f"AI Check for {url}:\n"
+                    f"❌ No significant changes detected\n\n"
+                    f"Focus: {focus}\n"
+                    f"⏱️ Check performed on {dt_str}"
+                )
+            # Store parsed fields for frontend/API
+            ai_description = ai_data.get("summary_of_changes", "No significant change.")
+            ai_significance = ai_data.get("significance_level", "none")
+            ai_detailed = ai_data.get("detailed_changes", [])
+            ai_focus = ai_data.get("focus_area_assessment", "")
+            ai_change = ai_data.get("change_detected", False)
+            ai_error = ai_data.get("error_message", None)
+            # Example: Save these fields in CheckHistory or API response for frontend
+            # (Frontend should use these fields, not the raw JSON)
             
             # Step 3: Determine if there's a change based on AI description
             change_detected = False
@@ -627,11 +719,12 @@ def check_website_direct(website_id):
             
             # Always assume success if we get here
             success = True
+            logger.info(f"[ManualCheck] Finished direct website check for ID: {website_id} at {datetime.now().isoformat()}")
             return True, "Check completed successfully", screenshot_path_rel, ai_description
             
     except Exception as e:
-        # Catch-all for app_context errors
-        error_message = f"Error in direct check (app context): {str(e)}"
+        import traceback
+        error_message = f"Error in direct check (app context): {str(e)}\n{traceback.format_exc()}"
         logger.error(f"App context exception during direct check: {e}", exc_info=True)
         return False, error_message, screenshot_path, ai_description
 

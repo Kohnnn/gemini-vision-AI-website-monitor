@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+set -e
+
 echo "Starting Playwright setup for Docker..."
 
 # Ensure correct path
@@ -6,7 +8,7 @@ export PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
 
 # Install browsers directly 
 echo "Installing Playwright browsers..."
-python -m playwright install chromium --with-deps
+python -m playwright install chromium
 mkdir -p /app/ms-playwright
 ls -la /app/ms-playwright
 

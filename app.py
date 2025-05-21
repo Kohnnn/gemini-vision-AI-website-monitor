@@ -20,6 +20,7 @@ import ssl
 import socket
 from flask_migrate import Migrate  # Add Flask-Migrate
 import glob
+import json
 
 # Add caching library
 from functools import lru_cache
@@ -228,6 +229,10 @@ class CheckHistory(db.Model):
     change_detected = db.Column(db.Boolean, default=False)
     error = db.Column(db.String(512))
     response_time = db.Column(db.Float, default=None)
+    ai_significance = db.Column(db.String(256))
+    ai_detailed = db.Column(db.Text)
+    ai_focus = db.Column(db.String(256))
+    ai_error = db.Column(db.String(256))
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -839,7 +844,7 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
             
             # Configure the model to use
             gemini_model = genai.GenerativeModel(
-                'gemini-1.5-flash-latest',
+                'gemini-2.5-flash-preview-05-20',
                 safety_settings={
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
                     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
@@ -1294,7 +1299,7 @@ def send_daily_summaries():
                                     ai_prompt += f"Change description: {change['description']}\n\n"
                                 
                                 # Generate the summary
-                                model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                                model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
                                 response = model.generate_content(ai_prompt)
                                 if response and response.text:
                                     # Use the AI-generated summary
@@ -1558,14 +1563,14 @@ def test_gemini_api(user_id):
             genai.configure(api_key=key)
             # Make a simple, low-cost call, like listing models
             models = genai.list_models()
-            # Check if the required vision model ('gemini-1.5-flash-latest') is available
-            vision_model_found = any('gemini-1.5-flash-latest' in m.name for m in models)
+            # Check if the required vision model ('gemini-2.5-flash-preview-05-20') is available
+            vision_model_found = any('gemini-2.5-flash-preview-05-20' in m.name for m in models)
             if vision_model_found:
-                 flash(f'API Key "{name}" is VALID and supports gemini-1.5-flash-latest.', 'success')
+                 flash(f'API Key "{name}" is VALID and supports gemini-2.5-flash-preview-05-20.', 'success')
                  app.logger.info(f"Gemini API key {name} is valid and supports required model.")
             else:
-                flash(f"API Key \"{name}\" is VALID but required model 'gemini-1.5-flash-latest' not found in list.", 'warning')
-                app.logger.warning(f"Gemini API key {name} is valid but required model 'gemini-1.5-flash-latest' missing.")
+                flash(f"API Key \"{name}\" is VALID but required model 'gemini-2.5-flash-preview-05-20' not found in list.", 'warning')
+                app.logger.warning(f"Gemini API key {name} is valid but required model 'gemini-2.5-flash-preview-05-20' missing.")
                 all_valid = False # Consider it not fully valid if the needed model isn't there
         except Exception as e:
             flash(f'API Key "{name}" is INVALID. Error: {e}', 'danger')
@@ -1605,19 +1610,19 @@ def test_gemini_api_simple():
             genai.configure(api_key=key)
             models = genai.list_models()
             # Check if the required vision model is available
-            if any('gemini-1.5-flash-latest' in m.name for m in models):
+            if any('gemini-2.5-flash-preview-05-20' in m.name for m in models):
                 msg = f"Connection successful with key ending in {masked_key} (supports gemini-1.5-flash)."
                 app.logger.info(msg)
                 return jsonify(success=True, ai_result=msg)
             else:
-                 app.logger.warning(f"Key ending in {masked_key} is valid but 'gemini-1.5-flash-latest' not found.")
+                 app.logger.warning(f"Key ending in {masked_key} is valid but 'gemini-2.5-flash-preview-05-20' not found.")
                  # Continue checking other keys
         except Exception as e:
             app.logger.error(f"Gemini API test failed with key ending in {masked_key}: {e}")
             # Continue checking other keys
 
     # If loop finishes without finding a suitable key
-    msg = "Failed to connect using any key, or no key supports gemini-1.5-flash-latest."
+    msg = "Failed to connect using any key, or no key supports gemini-2.5-flash-preview-05-20."
     app.logger.error(msg)
     return jsonify(success=False, error=msg)
 
