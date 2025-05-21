@@ -1,0 +1,70 @@
+# Exclude Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Exclude distribution/build files
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Exclude Docker files
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Exclude version control
+.git
+.gitignore
+
+# Exclude environment files
+.env
+venv/
+ENV/
+
+# Exclude pytest/coverage files
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+
+# Exclude editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Exclude large files (screenshots, etc.)
+screenshots/*.png
+data/*.png
+data/*.html
+data/*.txt
+!.gitkeep
+
+# Exclude run-time generated files
+*.sqlite
+*.db
+*.log
+!.gitkeep
+
+# Keep empty directories with .gitkeep files
+!data
+!screenshots 

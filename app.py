@@ -778,12 +778,12 @@ def send_teams_notification(user_id, message):
 
 # Gemini Vision API integration (real)
 # Modify function signature to accept monitoring_type and monitoring_keywords
-def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_updates', monitoring_keywords=None, ai_focus_area=None):
-    """Compares website state using Gemini Vision API, adapting prompt based on monitoring type."""
+def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_updates', monitoring_keywords=None, ai_focus_area=None, gemini_model='gemini-2.5-flash-preview-05-20'):
+    """Compares website state using Gemini Vision API, adapting prompt based on monitoring type and model."""
     import google.generativeai as genai
     from google.generativeai.types import HarmCategory, HarmBlockThreshold
     from pathlib import Path # Import Path here
-
+    import json
     # Collect potential API keys (existing logic)
     api_keys = []
     base_key = os.getenv('GEMINI_API_KEY')
@@ -793,20 +793,16 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
         numbered_key = os.getenv(f'GEMINI_API_KEY_{i}')
         if numbered_key:
             api_keys.append(numbered_key)
-
     if not api_keys:
         message = 'No Gemini API keys configured in .env (GEMINI_API_KEY or GEMINI_API_KEY_n).'
         app.logger.error(message)
-        return f"Error: {message}" # Return error message
-
+        return json.dumps({"error_message": message, "change_detected": False, "summary_of_changes": "AI error: No API key", "significance_level": "none", "detailed_changes": [], "focus_area_assessment": ""})
     # --- Get system prompt from environment or use default ---
     default_base_instruction = "You are an AI designed to compare screenshots of websites, your purpose is to show the change description. You should be focus on compare old/new screenshot/html only, compare what users want you to focus on. Write me output format to include bullet points with explanation. Summary what user want to compare. Skip what have been cover in the lastest compare description, which include in the page. Be analytical and comprehensive."
     custom_base_instruction = os.getenv('AI_COMPARE_SYSTEM_PROMPT', default_base_instruction)
     base_instruction = custom_base_instruction or default_base_instruction
-
     # --- Prepare the Prompt based on Monitoring Type --- 
-    prompt_parts = [] # Initialize empty prompt
-
+    prompt_parts = []
     if monitoring_type == 'specific_elements' and monitoring_keywords:
         prompt_parts.append(f"{base_instruction} Focus ONLY on changes related to these keywords/elements: '{monitoring_keywords}'. If changes related to these specific keywords are found, describe them clearly. If no relevant changes related to these keywords are found, simply state 'No relevant changes detected for monitored keywords.'.")
         app.logger.debug(f"Using specific elements prompt with keywords: {monitoring_keywords}")
@@ -815,7 +811,6 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
         if ai_focus_area:
             prompt_parts.append(f" Pay special attention to changes related to: '{ai_focus_area}'.")
         app.logger.debug(f"Using general updates prompt (Focus Area: {ai_focus_area or 'None'})")
-
     # --- Load Image Data (if available) --- 
     image_part = None
     if screenshot_path and os.path.exists(screenshot_path):
@@ -824,16 +819,13 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
                 "mime_type": "image/png",
                 "data": Path(screenshot_path).read_bytes()
             }
-            # Insert image data into prompt
             prompt_parts.insert(1, image_part)
             app.logger.debug(f"Added screenshot {screenshot_path} to Gemini prompt.")
         except Exception as e:
             app.logger.error(f"Failed to read screenshot {screenshot_path} for Gemini: {e}")
-            # Continue without image if reading fails
-            prompt_parts.insert(1, "(Screenshot loading failed)") # Add placeholder if needed
+            prompt_parts.insert(1, "(Screenshot loading failed)")
     else:
-         prompt_parts.insert(1, "(No screenshot provided)") # Add placeholder
-
+         prompt_parts.insert(1, "(No screenshot provided)")
     # --- Try API call with available keys ---
     last_error = None
     for key in api_keys:
@@ -841,10 +833,10 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
         app.logger.info(f"Attempting Gemini Vision API call with key ending in {masked_key}")
         try:
             genai.configure(api_key=key)
-            
             # Configure the model to use
-            gemini_model = genai.GenerativeModel(
-                'gemini-2.5-flash-preview-05-20',
+            model_name = gemini_model or 'gemini-2.5-flash-preview-05-20'
+            gemini_model_obj = genai.GenerativeModel(
+                model_name,
                 safety_settings={
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
                     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
@@ -852,21 +844,30 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
                     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
                 }
             )
-            
-            # Generate content response
-            response = gemini_model.generate_content(prompt_parts)
+            response = gemini_model_obj.generate_content(prompt_parts)
             ai_description = response.text
-            app.logger.info(f"Gemini API response received, length: {len(ai_description)}")
-            return ai_description
+            # Try to parse as JSON, fallback to text
+            try:
+                ai_data = json.loads(ai_description)
+                # If the model returns a JSON string with the expected fields, return it
+                return json.dumps(ai_data)
+            except Exception:
+                # Fallback: wrap the text in the expected JSON structure
+                return json.dumps({
+                    "change_detected": any(x in ai_description.lower() for x in ["website changed", "change detected", "difference found", "new content"]),
+                    "significance_level": "medium",
+                    "summary_of_changes": ai_description,
+                    "detailed_changes": [],
+                    "focus_area_assessment": ai_focus_area or "",
+                    "error_message": ""
+                })
         except Exception as e:
             last_error = str(e)
             app.logger.error(f"Gemini API call failed with key {masked_key}: {e}")
-            # Continue to next key
-            
     # If all keys failed, return error
     error_message = f"All Gemini API keys failed. Last error: {last_error}"
     app.logger.error(error_message)
-    return f"AI Analysis Error: {error_message}"
+    return json.dumps({"error_message": error_message, "change_detected": False, "summary_of_changes": "AI Analysis Error: " + error_message, "significance_level": "none", "detailed_changes": [], "focus_area_assessment": ai_focus_area or ""})
 
 # Anomaly detection (stub)
 def detect_anomaly(website, last_check, new_html, response_time, error=None):
