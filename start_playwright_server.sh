@@ -15,7 +15,7 @@ ls -la /app/ms-playwright
 # Start MCP server if available
 if [ -f "mcp_server/playwright-custom-server/server.js" ]; then
   echo "Starting Playwright MCP Server..."
-  cd mcp_server/playwright-custom-server
+  cd mcp_server/playwright-custom-serve
   node server.js
 else
   echo "MCP server not found, continuing with local Playwright"

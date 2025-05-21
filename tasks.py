@@ -5,6 +5,7 @@ from rq import get_current_job
 from config import get_redis_connection, logger
 import json # Import json
 import requests
+from app import app
 
 # No need to configure logging here since we're importing from config
 # Use the logger from config
@@ -62,6 +63,7 @@ def check_website(website_id, retry_count=0, max_retries=3):
         logger.error(f"User with user_id {website.user_id} not found for website ID {website_id} in check_website.") # Added logging
         return
     prev_check = CheckHistory.query.filter_by(website_id=website_id).order_by(CheckHistory.checked_at.desc()).first()
+    prev_screenshot = prev_check.screenshot_path if prev_check and prev_check.screenshot_path else None
     old_html = prev_check.html_path and open(prev_check.html_path).read() if prev_check else ''
     start_time = datetime.now()
     html, _, error = fetch_website_content(website)
@@ -117,14 +119,26 @@ def check_website(website_id, retry_count=0, max_retries=3):
             send_email_notification(user, f'Website Monitor CAPTCHA: {website.url}', 'CAPTCHA detected during screenshot capture. Please solve it manually.')
             return # Stop processing if CAPTCHA is detected during screenshot
 
-    ai_response = gemini_vision_api_compare(
-        html=None,  # We're using just the screenshot for direct checks
-        screenshot_path=screenshot_path,
-        monitoring_type=website.monitoring_type,
-        monitoring_keywords=website.monitoring_keywords,
-        ai_focus_area=website.ai_focus_area,
-        gemini_model="gemini-2.5-flash-preview-05-20"
-    )
+    # --- AI Comparison: Always provide both previous and current screenshots if available ---
+    ai_response = None
+    if prev_screenshot and screenshot_path:
+        ai_response = gemini_vision_api_compare(
+            html=None,
+            screenshot_path=[prev_screenshot, screenshot_path],  # Pass both images
+            monitoring_type=website.monitoring_type,
+            monitoring_keywords=website.monitoring_keywords,
+            ai_focus_area=website.ai_focus_area,
+            gemini_model="gemini-2.5-flash-preview-05-20"
+        )
+    else:
+        ai_response = gemini_vision_api_compare(
+            html=None,
+            screenshot_path=screenshot_path,
+            monitoring_type=website.monitoring_type,
+            monitoring_keywords=website.monitoring_keywords,
+            ai_focus_area=website.ai_focus_area,
+            gemini_model="gemini-2.5-flash-preview-05-20"
+        )
     logger.debug(f"AI response: {ai_response}")
     try:
         ai_data = json.loads(ai_response)
@@ -273,7 +287,6 @@ def check_website(website_id, retry_count=0, max_retries=3):
                 if gemini_api_key and ai_description and not is_error_desc:
                     # Import here to avoid circular imports
                     import google.generativeai as genai
-                    from app import app
                     
                     genai.configure(api_key=gemini_api_key)
                     
@@ -369,11 +382,10 @@ def check_website_direct(website_id):
     """Direct execution version of check_website.\nTakes screenshot, gets HTML, calls AI for description, saves history.\nReturns tuple: (success_boolean, message_string, screenshot_path, ai_description)\n"""
     logger.info(f"[ManualCheck] Starting direct website check for ID: {website_id} at {datetime.now().isoformat()}")
     # Import necessary components locally
-    from app import app, db, Website, CheckHistory, User, safe_filename, gemini_vision_api_compare, send_email_notification, send_telegram_notification, send_teams_notification # Import needed functions locally
+    from app import db, Website, CheckHistory, User, safe_filename, gemini_vision_api_compare, send_email_notification, send_telegram_notification, send_teams_notification # Import needed functions locally
     from browser_agent.screenshot import get_screenshot_playwright
     import os
     import difflib # Keep difflib for potential future use or logging
-    from datetime import datetime
     import requests
 
     screenshot_path = None
@@ -383,7 +395,6 @@ def check_website_direct(website_id):
     check_history_entry = None
 
     try:
-        # Use app_context for database operations
         with app.app_context():
             website = Website.query.filter_by(id=website_id).first()
             if not website:
@@ -399,6 +410,7 @@ def check_website_direct(website_id):
             
             # Get latest check history to use as baseline
             prev_check = CheckHistory.query.filter_by(website_id=website_id).order_by(CheckHistory.checked_at.desc()).first()
+            prev_screenshot = prev_check.screenshot_path if prev_check and prev_check.screenshot_path else None
             
             # --- Capture Screenshot --- #
             now = datetime.now()
@@ -488,14 +500,26 @@ def check_website_direct(website_id):
                 return False, error_message, None, None
             
             # Step 2: Get AI description (now expects JSON from AI_COMPARE_SYSTEM_PROMPT)
-            ai_response = gemini_vision_api_compare(
-                html=None,  # We're using just the screenshot for direct checks
-                screenshot_path=screenshot_path,
-                monitoring_type=website.monitoring_type,
-                monitoring_keywords=website.monitoring_keywords,
-                ai_focus_area=website.ai_focus_area,
-                gemini_model="gemini-2.5-flash-preview-05-20"
-            )
+            # --- AI Comparison: Always provide both previous and current screenshots if available ---
+            ai_response = None
+            if prev_screenshot and screenshot_path:
+                ai_response = gemini_vision_api_compare(
+                    html=None,
+                    screenshot_path=[prev_screenshot, screenshot_path],  # Pass both images
+                    monitoring_type=website.monitoring_type,
+                    monitoring_keywords=website.monitoring_keywords,
+                    ai_focus_area=website.ai_focus_area,
+                    gemini_model="gemini-2.5-flash-preview-05-20"
+                )
+            else:
+                ai_response = gemini_vision_api_compare(
+                    html=None,
+                    screenshot_path=screenshot_path,
+                    monitoring_type=website.monitoring_type,
+                    monitoring_keywords=website.monitoring_keywords,
+                    ai_focus_area=website.ai_focus_area,
+                    gemini_model="gemini-2.5-flash-preview-05-20"
+                )
             logger.debug(f"AI response: {ai_response}")
             import json
             try:

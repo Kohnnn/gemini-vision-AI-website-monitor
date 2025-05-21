@@ -33,9 +33,11 @@ services:
       - REDIS_URL=redis://redis:6379
       - DOCKER_ENV=true
       - TZ=Asia/Ho_Chi_Minh
+      - PLAYWRIGHT_SERVER_URL=http://playwright-server:11435
       - PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
     depends_on:
       - redis
+      - playwright-server
     restart: unless-stopped
     ulimits:
       nofile:
@@ -67,14 +69,28 @@ services:
       - PYTHONUNBUFFERED=1
       - PLAYWRIGHT_BROWSERS_PATH=/app/ms-playwright
       - TZ=Asia/Ho_Chi_Minh
+      - PLAYWRIGHT_SERVER_URL=http://playwright-server:11435
     depends_on:
       - redis
+      - playwright-server
       - web
     restart: unless-stopped
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
+
+  playwright-server:
+    image: node:20
+    working_dir: /app/mcp_server/playwright-custom-server
+    command: sh -c "npm install && npx playwright install-deps && npx playwright install && node server.js"
+    volumes:
+      - .:/app
+    ports:
+      - "11435:11435"
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    restart: unless-stopped   
 
 volumes:
   redis_data:

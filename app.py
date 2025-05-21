@@ -285,7 +285,18 @@ def dashboard(user_id):
 
     # User exists (or was just created), proceed to dashboard
     websites = Website.query.filter_by(user_id=user_id).all()
-    return render_template('dashboard.html', user=user, websites=websites, CheckHistory=CheckHistory)
+    # Parse ai_description for each website's latest history
+    ai_data_map = {}
+    for website in websites:
+        latest = website.get_latest_history()
+        if latest and latest.ai_description:
+            try:
+                ai_data_map[website.id] = json.loads(latest.ai_description)
+            except Exception:
+                ai_data_map[website.id] = None
+        else:
+            ai_data_map[website.id] = None
+    return render_template('dashboard.html', user=user, websites=websites, CheckHistory=CheckHistory, ai_data_map=ai_data_map)
 
 # Add Website
 @app.route('/add_website/<user_id>', methods=['GET', 'POST'])
@@ -425,7 +436,17 @@ def history(website_id):
     if not website:
         return redirect(url_for('index'))
     checks = CheckHistory.query.filter_by(website_id=website_id).order_by(CheckHistory.checked_at.desc()).all()
-    return render_template('check_history.html', website=website, checks=checks)
+    # Parse ai_description for each check
+    ai_data_list = []
+    for check in checks:
+        if check.ai_description:
+            try:
+                ai_data_list.append(json.loads(check.ai_description))
+            except Exception:
+                ai_data_list.append(None)
+        else:
+            ai_data_list.append(None)
+    return render_template('check_history.html', website=website, checks=checks, ai_data_list=ai_data_list)
 
 # Visual diff viewer route
 @app.route('/visual_diff/<int:website_id>/<int:curr_check_id>')
@@ -778,12 +799,12 @@ def send_teams_notification(user_id, message):
 
 # Gemini Vision API integration (real)
 # Modify function signature to accept monitoring_type and monitoring_keywords
-def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_updates', monitoring_keywords=None, ai_focus_area=None):
-    """Compares website state using Gemini Vision API, adapting prompt based on monitoring type."""
+def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_updates', monitoring_keywords=None, ai_focus_area=None, gemini_model='gemini-2.5-flash-preview-05-20'):
+    """Compares website state using Gemini Vision API, adapting prompt based on monitoring type and model."""
     import google.generativeai as genai
     from google.generativeai.types import HarmCategory, HarmBlockThreshold
     from pathlib import Path # Import Path here
-
+    import json
     # Collect potential API keys (existing logic)
     api_keys = []
     base_key = os.getenv('GEMINI_API_KEY')
@@ -793,20 +814,16 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
         numbered_key = os.getenv(f'GEMINI_API_KEY_{i}')
         if numbered_key:
             api_keys.append(numbered_key)
-
     if not api_keys:
         message = 'No Gemini API keys configured in .env (GEMINI_API_KEY or GEMINI_API_KEY_n).'
         app.logger.error(message)
-        return f"Error: {message}" # Return error message
-
+        return json.dumps({"error_message": message, "change_detected": False, "summary_of_changes": "AI error: No API key", "significance_level": "none", "detailed_changes": [], "focus_area_assessment": ""})
     # --- Get system prompt from environment or use default ---
-    default_base_instruction = "You are an AI designed to compare screenshots of websites, your purpose is to show the change description. You should be focus on compare old/new screenshot/html only, compare what users want you to focus on. Write me output format to include bullet points with explanation. Summary what user want to compare. Skip what have been cover in the lastest compare description, which include in the page. Be analytical and comprehensive."
+    default_base_instruction = "You are an AI designed to compare screenshots of websites. You will receive two images: the previous and the current. Your purpose is to show the change description. Focus on comparing old/new screenshot/html only, compare what users want you to focus on. Write output as valid JSON with bullet points and explanations. Be analytical and comprehensive."
     custom_base_instruction = os.getenv('AI_COMPARE_SYSTEM_PROMPT', default_base_instruction)
     base_instruction = custom_base_instruction or default_base_instruction
-
     # --- Prepare the Prompt based on Monitoring Type --- 
-    prompt_parts = [] # Initialize empty prompt
-
+    prompt_parts = []
     if monitoring_type == 'specific_elements' and monitoring_keywords:
         prompt_parts.append(f"{base_instruction} Focus ONLY on changes related to these keywords/elements: '{monitoring_keywords}'. If changes related to these specific keywords are found, describe them clearly. If no relevant changes related to these keywords are found, simply state 'No relevant changes detected for monitored keywords.'.")
         app.logger.debug(f"Using specific elements prompt with keywords: {monitoring_keywords}")
@@ -815,25 +832,37 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
         if ai_focus_area:
             prompt_parts.append(f" Pay special attention to changes related to: '{ai_focus_area}'.")
         app.logger.debug(f"Using general updates prompt (Focus Area: {ai_focus_area or 'None'})")
-
     # --- Load Image Data (if available) --- 
-    image_part = None
-    if screenshot_path and os.path.exists(screenshot_path):
+    image_parts = []
+    # Accept a list of screenshot paths for before/after comparison
+    if isinstance(screenshot_path, list) and len(screenshot_path) == 2:
+        for idx, path in enumerate(screenshot_path):
+            if path and os.path.exists(path):
+                try:
+                    image_parts.append({
+                        "mime_type": "image/png",
+                        "data": Path(path).read_bytes(),
+                        "role": "previous" if idx == 0 else "current"
+                    })
+                    app.logger.debug(f"Added {'previous' if idx == 0 else 'current'} screenshot {path} to Gemini prompt.")
+                except Exception as e:
+                    app.logger.error(f"Failed to read screenshot {path} for Gemini: {e}")
+                    image_parts.append(f"(Screenshot loading failed: {path})")
+        # Insert both images after the prompt
+        prompt_parts = prompt_parts[:1] + image_parts + prompt_parts[1:]
+    elif screenshot_path and os.path.exists(screenshot_path):
         try:
             image_part = {
                 "mime_type": "image/png",
                 "data": Path(screenshot_path).read_bytes()
             }
-            # Insert image data into prompt
             prompt_parts.insert(1, image_part)
             app.logger.debug(f"Added screenshot {screenshot_path} to Gemini prompt.")
         except Exception as e:
             app.logger.error(f"Failed to read screenshot {screenshot_path} for Gemini: {e}")
-            # Continue without image if reading fails
-            prompt_parts.insert(1, "(Screenshot loading failed)") # Add placeholder if needed
+            prompt_parts.insert(1, "(Screenshot loading failed)")
     else:
-         prompt_parts.insert(1, "(No screenshot provided)") # Add placeholder
-
+         prompt_parts.insert(1, "(No screenshot provided)")
     # --- Try API call with available keys ---
     last_error = None
     for key in api_keys:
@@ -841,10 +870,10 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
         app.logger.info(f"Attempting Gemini Vision API call with key ending in {masked_key}")
         try:
             genai.configure(api_key=key)
-            
             # Configure the model to use
-            gemini_model = genai.GenerativeModel(
-                'gemini-2.5-flash-preview-05-20',
+            model_name = gemini_model or 'gemini-2.5-flash-preview-05-20'
+            gemini_model_obj = genai.GenerativeModel(
+                model_name,
                 safety_settings={
                     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
                     HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
@@ -852,21 +881,30 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
                     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
                 }
             )
-            
-            # Generate content response
-            response = gemini_model.generate_content(prompt_parts)
+            response = gemini_model_obj.generate_content(prompt_parts)
             ai_description = response.text
-            app.logger.info(f"Gemini API response received, length: {len(ai_description)}")
-            return ai_description
+            # Try to parse as JSON, fallback to text
+            try:
+                ai_data = json.loads(ai_description)
+                # If the model returns a JSON string with the expected fields, return it
+                return json.dumps(ai_data)
+            except Exception:
+                # Fallback: wrap the text in the expected JSON structure
+                return json.dumps({
+                    "change_detected": any(x in ai_description.lower() for x in ["website changed", "change detected", "difference found", "new content"]),
+                    "significance_level": "medium",
+                    "summary_of_changes": ai_description,
+                    "detailed_changes": [],
+                    "focus_area_assessment": ai_focus_area or "",
+                    "error_message": ""
+                })
         except Exception as e:
             last_error = str(e)
             app.logger.error(f"Gemini API call failed with key {masked_key}: {e}")
-            # Continue to next key
-            
     # If all keys failed, return error
     error_message = f"All Gemini API keys failed. Last error: {last_error}"
     app.logger.error(error_message)
-    return f"AI Analysis Error: {error_message}"
+    return json.dumps({"error_message": error_message, "change_detected": False, "summary_of_changes": "AI Analysis Error: " + error_message, "significance_level": "none", "detailed_changes": [], "focus_area_assessment": ai_focus_area or ""})
 
 # Anomaly detection (stub)
 def detect_anomaly(website, last_check, new_html, response_time, error=None):
@@ -1940,6 +1978,23 @@ def serve_css():
     .status-badge.warning { background-color: #ff9800; } /* Warning status for change detection */
     """
     return Response(css_content, mimetype='text/css')
+
+@app.route('/test-notification/<user_id>', methods=['POST'])
+def test_notification(user_id):
+    """Test both Gmail and Telegram notification sending for a user."""
+    user = User.query.filter_by(user_id=user_id).first()
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('settings', user_id=user_id))
+    test_subject = "Test Notification from AI Website Monitor"
+    test_body = f"This is a test notification for user {user.user_id}. If you receive this, notifications are working."
+    email_success, email_message = send_email_notification(user, test_subject, test_body)
+    telegram_success, telegram_message = send_telegram_notification(user.user_id, test_body)
+    if email_success and telegram_success:
+        flash('Test Gmail and Telegram notifications sent successfully.', 'success')
+    else:
+        flash(f'Gmail success: {email_success}, Telegram success: {telegram_success}. Email message: {email_message}, Telegram message: {telegram_message}', 'danger')
+    return redirect(url_for('settings', user_id=user_id))
 
 if __name__ == '__main__':
     # Check if running in debug mode (reloader active)

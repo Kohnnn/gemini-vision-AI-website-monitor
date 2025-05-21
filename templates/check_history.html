@@ -43,7 +43,12 @@
 
                 {# AI Description #}
                 <div class="text-sm text-muted mb-3 change-description">
-                    {% if check.ai_description %}
+                    {% set ai_data = ai_data_list[loop.index0] %}
+                    {% if ai_data %}
+                        <strong>AI Summary:</strong> <strong>{{ ai_data.summary_of_changes or 'N/A' }}</strong><br>
+                        <span>Significance: <span class="badge badge-info">{{ ai_data.significance_level or 'N/A' }}</span></span>
+                        {% if ai_data.ai_focus_area %}<br><span>Focus: {{ ai_data.ai_focus_area }}</span>{% endif %}
+                    {% elif check.ai_description %}
                         <strong>AI Description:</strong> {{ check.ai_description }}
                     {% elif check.error %}
                         <strong class="text-error-text">Error:</strong> {{ check.error }}

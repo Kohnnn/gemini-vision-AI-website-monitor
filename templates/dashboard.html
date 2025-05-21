@@ -86,7 +86,17 @@
                 <div class="text-sm text-muted mb-3 change-description">
                     {% if latest_history %}
                         {% if latest_history.change_detected %}
-                            <strong class="text-warning-text">Change:</strong> <span title="{{ latest_history.ai_description }}">{{ latest_history.ai_description | truncate(60, True) if latest_history.ai_description else 'Yes (No AI description)' }}</span>
+                            {% set ai_data = ai_data_map[website.id] %}
+                            <strong class="text-warning-text">Change:</strong>
+                            {% if ai_data %}
+                                <span>
+                                    <strong>{{ ai_data.summary_of_changes or 'N/A' }}</strong><br>
+                                    <span>Significance: <span class="badge badge-info">{{ ai_data.significance_level or 'N/A' }}</span></span>
+                                    {% if ai_data.ai_focus_area %}<br><span>Focus: {{ ai_data.ai_focus_area }}</span>{% endif %}
+                                </span>
+                            {% else %}
+                                <span title="{{ latest_history.ai_description }}">{{ latest_history.ai_description | truncate(60, True) if latest_history.ai_description else 'Yes (No AI description)' }}</span>
+                            {% endif %}
                         {% elif latest_history.error %}
                             <strong class="text-error-text">Error:</strong> <span title="{{ latest_history.error }}">{{ latest_history.error | truncate(60, True) }}</span>
                         {% else %}
@@ -134,7 +144,16 @@
                                 <td><a href="{{ website.url }}" target="_blank" rel="noopener noreferrer" class="link-primary font-medium" title="Visit {{ website.url }}">{{ website.url | truncate(50, True) }}</a></td>
                                 <td>{{ latest_history.checked_at.strftime('%Y-%m-%d %H:%M') if latest_history else 'Never' }}</td>
                                 <td>{{ last_change_history.checked_at.strftime('%Y-%m-%d %H:%M') if last_change_history else 'N/A' }}</td>
-                                <td>{{ (last_change_history.ai_description or 'N/A') | truncate(70, True) if last_change_history else 'N/A' }}</td>
+                                <td>
+                                    {% set ai_data = ai_data_map[website.id] if last_change_history else None %}
+                                    {% if ai_data %}
+                                        <strong>{{ ai_data.summary_of_changes or 'N/A' }}</strong><br>
+                                        <span>Significance: <span class="badge badge-info">{{ ai_data.significance_level or 'N/A' }}</span></span>
+                                        {% if ai_data.ai_focus_area %}<br><span>Focus: {{ ai_data.ai_focus_area }}</span>{% endif %}
+                                    {% else %}
+                                        {{ (last_change_history.ai_description or 'N/A') | truncate(70, True) if last_change_history else 'N/A' }}
+                                    {% endif %}
+                                </td>
                                 <td>
                                      {% set status_class = website.status | lower %}
                                      {% if status_class == 'down' or status_class == 'error' %}{% set status_class = 'error' %}
