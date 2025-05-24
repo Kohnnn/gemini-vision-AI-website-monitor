@@ -62,6 +62,28 @@ def check_local_playwright():
         return False
 
 if __name__ == "__main__":
+    import time
+    import sys
+    
+    # Add specific command for checking the Vietnamese government site
+    if len(sys.argv) > 1 and sys.argv[1] == "check-ssc-gov":
+        url = "https://congbothongtin.ssc.gov.vn/faces/NewsSearch"
+        output_path = "data/test_ssc_gov.png"
+        print(f"Special check for {url} with extended timeout")
+        success, message, _ = get_screenshot_playwright(
+            url=url,
+            output_path=output_path,
+            max_retries=5,
+            retry_delay=15,
+            wait_for_selector="body",
+            js_rendering_mode="full"
+        )
+        print(f"Result: {'Success' if success else 'Failed'} - {message}")
+        sys.exit(0 if success else 1)
+    
+    # Original test
+    url = sys.argv[1] if len(sys.argv) > 1 else "https://www.example.com"
+    
     server_ok = check_playwright_server()
     local_ok = check_local_playwright()
     

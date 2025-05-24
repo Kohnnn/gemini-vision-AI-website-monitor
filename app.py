@@ -841,8 +841,8 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
                 try:
                     image_parts.append({
                         "mime_type": "image/png",
-                        "data": Path(path).read_bytes(),
-                        "role": "previous" if idx == 0 else "current"
+                        "data": Path(path).read_bytes()
+                        # Removed the 'role' field which caused the error
                     })
                     app.logger.debug(f"Added {'previous' if idx == 0 else 'current'} screenshot {path} to Gemini prompt.")
                 except Exception as e:
@@ -850,6 +850,10 @@ def gemini_vision_api_compare(html, screenshot_path, monitoring_type='general_up
                     image_parts.append(f"(Screenshot loading failed: {path})")
         # Insert both images after the prompt
         prompt_parts = prompt_parts[:1] + image_parts + prompt_parts[1:]
+        
+        # Instead of using 'role', add text descriptors before each image
+        prompt_parts.insert(1, "Previous screenshot:")
+        prompt_parts.insert(3, "Current screenshot:")
     elif screenshot_path and os.path.exists(screenshot_path):
         try:
             image_part = {

@@ -83,14 +83,27 @@ services:
   playwright-server:
     image: node:20
     working_dir: /app/mcp_server/playwright-custom-server
-    command: sh -c "npm install && npx playwright install-deps && npx playwright install && node server.js"
+    command: sh -c "npm install && npx playwright install-deps && npx playwright install && npm start"
     volumes:
       - .:/app
     ports:
       - "11435:11435"
     environment:
       - TZ=Asia/Ho_Chi_Minh
-    restart: unless-stopped   
+      - NODE_OPTIONS=--max_old_space_size=4096
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11435/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 2G
 
 volumes:
   redis_data:
